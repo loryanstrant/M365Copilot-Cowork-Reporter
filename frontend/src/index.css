@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
 }
 
 html,
@@ -18,3 +18,44 @@ body {
     Arial, sans-serif;
   @apply bg-slate-50 text-slate-800;
 }
+
+.dark body {
+  @apply bg-slate-950 text-slate-100;
+}
+
+/* Keep form controls readable in both themes. */
+input,
+select,
+textarea {
+  color-scheme: light;
+  @apply bg-white text-slate-800;
+}
+
+.dark input,
+.dark select,
+.dark textarea {
+  color-scheme: dark;
+  @apply border-slate-700 bg-slate-800 text-slate-100;
+}
+
+/* Scoped dark-mode fallbacks: catch page content that sets explicit light text /
+   border / bg utilities so every page reads correctly in dark mode without
+   annotating each element. Descendant selectors outrank single-class utilities. */
+.dark main .text-slate-800 { @apply text-slate-100; }
+.dark main .text-slate-700 { @apply text-slate-200; }
+.dark main .text-slate-600 { @apply text-slate-300; }
+.dark main .text-slate-500 { @apply text-slate-400; }
+.dark main .text-brand-700 { @apply text-brand-300; }
+.dark main .text-brand-600 { @apply text-brand-400; }
+.dark main .border-slate-300 { @apply border-slate-600; }
+.dark main .border-slate-200 { @apply border-slate-700; }
+.dark main .border-slate-100 { @apply border-slate-800; }
+.dark main .bg-slate-50 { @apply bg-slate-800/60; }
+.dark main .bg-white { @apply bg-slate-900; }
+.dark main .bg-brand-50 { @apply bg-brand-500/15; }
+
+/* Secondary (bordered/ghost) buttons: give them a visible surface in dark mode
+   instead of rendering as a bright transparent box. */
+.dark main button.border { @apply bg-slate-800 text-slate-100; }
+.dark main button.border:hover { @apply bg-slate-700; }
+.dark main .hover\:bg-slate-100:hover { @apply bg-slate-700; }
