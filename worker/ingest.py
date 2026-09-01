@@ -200,11 +200,17 @@ async def run_ingest(
         job = JobRun(job_name=job_name, status="running")
         session.add(job)
         await session.flush()
+        await session.commit()
         stats: dict[str, Any] = {}
         try:
+            # Each collector commits independently so a slow/failing audit step
+            # never blocks directory users or cost from landing.
             stats["users"] = await collect_directory_users(session, client)
+            await session.commit()
             stats["cost"] = await collect_costs(session, client, config, now)
+            await session.commit()
             stats["audit"] = await collect_cowork_events(session, client, config, now)
+            await session.commit()
             job.status = "success"
             job.finished_at = datetime.now(timezone.utc)
             job.stats = stats
@@ -212,6 +218,7 @@ async def run_ingest(
             logger.info("Ingest '%s' complete: %s", job_name, stats)
             return stats
         except Exception as exc:  # noqa: BLE001 - persisted for observability
+            await session.rollback()
             stats["error"] = str(exc)
             job.status = "failed"
             job.finished_at = datetime.now(timezone.utc)

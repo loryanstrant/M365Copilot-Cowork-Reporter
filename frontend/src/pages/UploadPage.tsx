@@ -11,7 +11,11 @@ export default function UploadPage() {
         <p className="text-sm text-slate-500">
           Microsoft ships no API for Cowork task metrics or Copilot Credit consumption.
           Export them from the M365 admin centre and upload here — re-uploading a fresher
-          export just updates the rows.
+          export just updates the rows. Step-by-step export instructions are on the{" "}
+          <a href="/help" className="font-medium text-brand-600 underline">
+            Setup guide
+          </a>
+          .
         </p>
       </div>
 

@@ -9,6 +9,7 @@ const NAV = [
   { to: "/upload", label: "Upload CSV", admin: true },
   { to: "/billing-policies", label: "Chargeback", admin: true },
   { to: "/settings", label: "Settings", admin: true },
+  { to: "/help", label: "Setup guide", admin: false },
   { to: "/about", label: "About", admin: false },
 ];
 

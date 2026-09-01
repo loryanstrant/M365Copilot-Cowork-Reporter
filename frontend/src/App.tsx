@@ -8,6 +8,7 @@ import UsagePage from "./pages/UsagePage";
 import SettingsPage from "./pages/SettingsPage";
 import UploadPage from "./pages/UploadPage";
 import BillingPolicyPage from "./pages/BillingPolicyPage";
+import HelpPage from "./pages/HelpPage";
 import AboutPage from "./pages/AboutPage";
 
 export default function App() {
@@ -34,6 +35,7 @@ export default function App() {
         <Route path="/" element={<OverviewPage />} />
         <Route path="/consumption" element={<ConsumptionPage />} />
         <Route path="/usage" element={<UsagePage />} />
+        <Route path="/help" element={<HelpPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/settings" element={adminOnly(<SettingsPage />)} />
         <Route path="/upload" element={adminOnly(<UploadPage />)} />

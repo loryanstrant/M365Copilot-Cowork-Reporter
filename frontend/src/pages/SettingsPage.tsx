@@ -10,6 +10,8 @@ export default function SettingsPage() {
   const [msg, setMsg] = useState<string | null>(null);
   const [test, setTest] = useState<TestConnection | null>(null);
   const [busy, setBusy] = useState(false);
+  const [backfillDays, setBackfillDays] = useState<string>("");
+  const [progress, setProgress] = useState<Record<string, unknown> | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -78,12 +80,37 @@ export default function SettingsPage() {
     setMsg(r.detail);
   }
 
+  async function runBackfill() {
+    setMsg(null);
+    const days = backfillDays.trim() ? Number(backfillDays) : undefined;
+    const r = await api<{ status: string; detail: string }>(
+      `/admin/backfill/run${days ? `?lookback_days=${days}` : ""}`,
+      { method: "POST" },
+    );
+    setMsg(r.detail);
+    // Poll progress until it stops running.
+    const poll = async () => {
+      const p = await api<Record<string, unknown>>("/admin/backfill/progress");
+      setProgress(p);
+      if (p.running) setTimeout(poll, 2500);
+    };
+    poll();
+  }
+
   const field = "w-full rounded-md border border-slate-300 px-3 py-2 text-sm";
   const label = "mb-1 block text-sm text-slate-600";
 
   return (
     <div className="space-y-6">
       <h1 className="text-xl font-semibold text-slate-800">Settings</h1>
+      <div className="rounded-md bg-brand-50 px-3 py-2 text-sm text-brand-700">
+        New here? See the{" "}
+        <a href="/help" className="font-medium underline">
+          Setup guide
+        </a>{" "}
+        for app-registration permissions, granting Cost Management Reader, and exporting
+        the admin-centre CSVs.
+      </div>
 
       <Card title="App registration (Graph + Azure)">
         <p className="mb-4 text-xs text-slate-500">
@@ -217,6 +244,67 @@ export default function SettingsPage() {
           )}
         </Card>
       )}
+
+      <Card title="Historical audit backfill">
+        <p className="mb-3 text-xs text-slate-500">
+          Deep-loads Cowork events from the Purview audit log, chunked into monthly
+          windows. Reaches back to Cowork GA (June 2026) by default, or set a shorter
+          look-back below. Safe to re-run — events upsert on their ID.
+        </p>
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <label className="mb-1 block text-sm text-slate-600">
+              Look-back (days, blank = since GA)
+            </label>
+            <input
+              type="number"
+              className="w-56 rounded-md border border-slate-300 px-3 py-2 text-sm"
+              value={backfillDays}
+              onChange={(e) => setBackfillDays(e.target.value)}
+              placeholder="e.g. 120"
+            />
+          </div>
+          <button
+            onClick={runBackfill}
+            className="rounded-md border border-slate-300 px-4 py-2 text-sm hover:bg-slate-100"
+          >
+            Run backfill
+          </button>
+        </div>
+        {progress && (
+          <div className="mt-4">
+            <div className="mb-1 flex justify-between text-xs text-slate-500">
+              <span>
+                {progress.running ? "Running" : "Done"} —{" "}
+                {String(progress.current_window ?? "")}
+              </span>
+              <span>
+                {Number(progress.windows_done ?? 0)}/{Number(progress.windows_total ?? 0)}{" "}
+                windows · {Number(progress.cowork_events ?? 0)} Cowork events
+              </span>
+            </div>
+            <div className="h-2 w-full overflow-hidden rounded bg-slate-100">
+              <div
+                className="h-full bg-brand-500 transition-all"
+                style={{
+                  width: `${
+                    Number(progress.windows_total ?? 0)
+                      ? (Number(progress.windows_done ?? 0) /
+                          Number(progress.windows_total)) *
+                        100
+                      : 0
+                  }%`,
+                }}
+              />
+            </div>
+            {progress.error ? (
+              <div className="mt-2 text-xs text-red-600">
+                {String(progress.error)}
+              </div>
+            ) : null}
+          </div>
+        )}
+      </Card>
     </div>
   );
 }

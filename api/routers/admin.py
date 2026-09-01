@@ -37,6 +37,12 @@ from shared.models import (
     JobRun,
 )
 from worker.ingest import run_ingest, test_connection
+from worker.backfill import (
+    get_progress,
+    is_running as backfill_running,
+    request_cancel,
+    run_backfill,
+)
 
 logger = logging.getLogger("api.admin")
 
@@ -134,6 +140,41 @@ async def ingest_run(background: BackgroundTasks) -> IngestRunOut:
         )
     background.add_task(_run_manual_ingest)
     return IngestRunOut(status="started", detail="Ingest started in the background.")
+
+
+async def _run_backfill(lookback_days: int | None) -> None:
+    try:
+        await run_backfill(SessionLocal, lookback_days=lookback_days)
+    except Exception:  # pragma: no cover - logged for observability
+        logger.exception("Backfill failed")
+
+
+@router.post("/backfill/run", response_model=IngestRunOut)
+async def backfill_run(
+    background: BackgroundTasks, lookback_days: int | None = None
+) -> IngestRunOut:
+    """Deep historical Purview audit backfill (chunked into monthly windows)."""
+    if backfill_running():
+        return IngestRunOut(
+            status="already_running", detail="A backfill is already in progress."
+        )
+    background.add_task(_run_backfill, lookback_days)
+    return IngestRunOut(
+        status="started",
+        detail="Backfill started. Reaches back to Cowork GA (June 2026) unless a "
+        "shorter lookback is given.",
+    )
+
+
+@router.get("/backfill/progress")
+async def backfill_progress() -> dict:
+    return get_progress()
+
+
+@router.post("/backfill/cancel", response_model=IngestRunOut)
+async def backfill_cancel() -> IngestRunOut:
+    request_cancel()
+    return IngestRunOut(status="cancelling", detail="Backfill cancellation requested.")
 
 
 @router.post("/seed-demo", response_model=IngestRunOut)
