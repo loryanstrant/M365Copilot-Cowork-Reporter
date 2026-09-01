@@ -7,6 +7,7 @@ const NAV = [
   { to: "/", label: "Overview", end: true, admin: false },
   { to: "/consumption", label: "Consumption", admin: false },
   { to: "/usage", label: "Usage", admin: false },
+  { to: "/users", label: "Tenant users", admin: false },
   { to: "/upload", label: "Upload CSV", admin: true },
   { to: "/billing-policies", label: "Chargeback", admin: true },
   { to: "/settings", label: "Settings", admin: true },

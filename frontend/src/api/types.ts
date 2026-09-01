@@ -30,11 +30,30 @@ export interface UsageByUser {
   user_principal_name: string;
   display_name: string | null;
   department: string | null;
+  job_title: string | null;
+  company_name: string | null;
+  office_location: string | null;
+  country: string | null;
+  manager_name: string | null;
   total_tasks: number;
   scheduled_tasks: number;
   user_initiated_tasks: number;
   active_days: number;
   last_activity_date: string | null;
+}
+
+export interface DirectoryUser {
+  user_principal_name: string | null;
+  display_name: string | null;
+  job_title: string | null;
+  department: string | null;
+  company_name: string | null;
+  office_location: string | null;
+  city: string | null;
+  country: string | null;
+  manager_name: string | null;
+  user_type: string | null;
+  account_enabled: boolean | null;
 }
 
 export interface UsageTrend {

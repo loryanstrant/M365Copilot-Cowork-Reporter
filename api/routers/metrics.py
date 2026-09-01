@@ -15,6 +15,7 @@ from api.auth import get_current_user
 from api.schemas import (
     CostByGroupOut,
     CostTrendOut,
+    DirectoryUserOut,
     KpiOut,
     UsageByUserOut,
     UsageTrendOut,
@@ -189,7 +190,7 @@ async def usage_by_user(
         period = await _closest_period(session, latest_refresh, 28)
 
     stmt = (
-        select(CoworkUsage, DirectoryUser.department)
+        select(CoworkUsage, DirectoryUser)
         .select_from(CoworkUsage)
         .join(
             DirectoryUser,
@@ -207,14 +208,47 @@ async def usage_by_user(
         UsageByUserOut(
             user_principal_name=u.user_principal_name,
             display_name=u.display_name,
-            department=dept,
+            department=du.department if du else None,
+            job_title=du.job_title if du else None,
+            company_name=du.company_name if du else None,
+            office_location=du.office_location if du else None,
+            country=du.country if du else None,
+            manager_name=du.manager_name if du else None,
             total_tasks=u.total_tasks,
             scheduled_tasks=u.scheduled_tasks,
             user_initiated_tasks=u.user_initiated_tasks,
             active_days=u.active_days,
             last_activity_date=u.last_activity_date,
         )
-        for (u, dept) in rows
+        for (u, du) in rows
+    ]
+
+
+@router.get("/users", response_model=list[DirectoryUserOut])
+async def directory_users(
+    session: AsyncSession = Depends(get_session),
+) -> list[DirectoryUserOut]:
+    """Full imported tenant user listing (enabled members) for sort/filter."""
+    rows = (
+        await session.execute(
+            select(DirectoryUser).order_by(DirectoryUser.display_name)
+        )
+    ).scalars().all()
+    return [
+        DirectoryUserOut(
+            user_principal_name=u.upn,
+            display_name=u.display_name,
+            job_title=u.job_title,
+            department=u.department,
+            company_name=u.company_name,
+            office_location=u.office_location,
+            city=u.city,
+            country=u.country,
+            manager_name=u.manager_name,
+            user_type=u.user_type,
+            account_enabled=u.account_enabled,
+        )
+        for u in rows
     ]
 
 

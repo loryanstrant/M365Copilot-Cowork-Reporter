@@ -82,20 +82,33 @@ def transform_cowork_event(record: dict[str, Any]) -> dict[str, Any] | None:
 
 def transform_directory_user(user: dict[str, Any]) -> dict[str, Any]:
     """Map a Graph user to a ``dim_user`` row dict."""
-    return {
+    manager = user.get("manager") or {}
+    ext = user.get("onPremisesExtensionAttributes") or {}
+    row: dict[str, Any] = {
         "user_id": user.get("id"),
         "upn": user.get("userPrincipalName"),
         "email": user.get("mail"),
         "display_name": user.get("displayName"),
+        "given_name": user.get("givenName"),
+        "surname": user.get("surname"),
         "job_title": user.get("jobTitle"),
         "company_name": user.get("companyName"),
         "department": user.get("department"),
         "office_location": user.get("officeLocation"),
+        "city": user.get("city"),
+        "state": user.get("state"),
         "country": user.get("country"),
-        "manager_id": (user.get("manager") or {}).get("id"),
+        "usage_location": user.get("usageLocation"),
+        "employee_id": user.get("employeeId"),
+        "employee_type": user.get("employeeType"),
+        "manager_id": manager.get("id"),
+        "manager_name": manager.get("displayName"),
         "account_enabled": user.get("accountEnabled"),
         "user_type": user.get("userType"),
     }
+    for i in range(1, 16):
+        row[f"ext{i}"] = ext.get(f"extensionAttribute{i}")
+    return row
 
 
 def is_included_directory_user(user: dict[str, Any]) -> bool:

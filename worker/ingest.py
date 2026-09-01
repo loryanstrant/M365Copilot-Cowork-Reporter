@@ -54,8 +54,11 @@ _EVENT_UPDATE_KEYS = [
     "raw_json",
 ]
 _USER_UPDATE_KEYS = [
-    "upn", "email", "display_name", "job_title", "company_name", "department",
-    "office_location", "country", "manager_id", "account_enabled", "user_type",
+    "upn", "email", "display_name", "given_name", "surname", "job_title",
+    "company_name", "department", "office_location", "city", "state", "country",
+    "usage_location", "employee_id", "employee_type", "manager_id",
+    "manager_name", "account_enabled", "user_type",
+    *[f"ext{i}" for i in range(1, 16)],
 ]
 
 

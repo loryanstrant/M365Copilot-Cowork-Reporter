@@ -222,9 +222,11 @@ class ApiClient:
         params = {
             "$select": (
                 "id,userPrincipalName,mail,userType,jobTitle,companyName,"
-                "department,officeLocation,country,displayName,accountEnabled"
+                "department,officeLocation,city,state,country,usageLocation,"
+                "displayName,givenName,surname,employeeId,employeeType,"
+                "accountEnabled,onPremisesExtensionAttributes"
             ),
-            "$expand": "manager($select=id)",
+            "$expand": "manager($select=id,displayName)",
             "$top": 999,
         }
         async for item in self._paged(f"{GRAPH_BASE}/users", params=params):

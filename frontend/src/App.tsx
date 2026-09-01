@@ -5,6 +5,7 @@ import LoginPage from "./pages/LoginPage";
 import OverviewPage from "./pages/OverviewPage";
 import ConsumptionPage from "./pages/ConsumptionPage";
 import UsagePage from "./pages/UsagePage";
+import UsersPage from "./pages/UsersPage";
 import SettingsPage from "./pages/SettingsPage";
 import UploadPage from "./pages/UploadPage";
 import BillingPolicyPage from "./pages/BillingPolicyPage";
@@ -35,6 +36,7 @@ export default function App() {
         <Route path="/" element={<OverviewPage />} />
         <Route path="/consumption" element={<ConsumptionPage />} />
         <Route path="/usage" element={<UsagePage />} />
+        <Route path="/users" element={<UsersPage />} />
         <Route path="/help" element={<HelpPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/settings" element={adminOnly(<SettingsPage />)} />

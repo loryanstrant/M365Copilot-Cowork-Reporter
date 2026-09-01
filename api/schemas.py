@@ -138,11 +138,30 @@ class UsageByUserOut(BaseModel):
     user_principal_name: str
     display_name: str | None
     department: str | None
+    job_title: str | None
+    company_name: str | None
+    office_location: str | None
+    country: str | None
+    manager_name: str | None
     total_tasks: int
     scheduled_tasks: int
     user_initiated_tasks: int
     active_days: int
     last_activity_date: datetime | None
+
+
+class DirectoryUserOut(BaseModel):
+    user_principal_name: str | None
+    display_name: str | None
+    job_title: str | None
+    department: str | None
+    company_name: str | None
+    office_location: str | None
+    city: str | None
+    country: str | None
+    manager_name: str | None
+    user_type: str | None
+    account_enabled: bool | None
 
 
 class UsageTrendOut(BaseModel):
