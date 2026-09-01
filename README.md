@@ -10,6 +10,20 @@ Power BI — just a small FastAPI + worker + Postgres + React app you can run wi
 
 > Community project, MIT-licensed. Not covered by a Microsoft support agreement.
 
+## Screenshots
+
+| Overview | Consumption |
+|---|---|
+| ![Overview](docs/screenshots/overview.png) | ![Consumption](docs/screenshots/consumption.png) |
+
+| Usage (sortable/filterable) | Tenant users |
+|---|---|
+| ![Usage](docs/screenshots/usage.png) | ![Tenant users](docs/screenshots/tenant-users.png) |
+
+| Settings (dark mode) | Sign in |
+|---|---|
+| ![Settings](docs/screenshots/settings.png) | ![Sign in](docs/screenshots/login.png) |
+
 ## Why this exists
 
 Copilot Cowork has **no single reporting API**. The data you need is scattered
