@@ -1,0 +1,207 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/0.1.2-preview/CreateUIDefinition.MultiVm.json#",
+  "handler": "Microsoft.Azure.CreateUIDef",
+  "version": "0.1.2-preview",
+  "parameters": {
+    "config": {
+      "isWizard": false,
+      "basics": {
+        "description": "Deploy the **M365 Copilot Cowork Reporter** to Azure Container Apps. It pulls prebuilt public images, provisions a PostgreSQL flexible server, and serves the dashboard on a public HTTPS endpoint. You only need to set an admin password.",
+        "location": {
+          "label": "Region",
+          "toolTip": "Azure region for all resources.",
+          "resourceTypes": [
+            "Microsoft.App/managedEnvironments",
+            "Microsoft.DBforPostgreSQL/flexibleServers"
+          ]
+        }
+      }
+    },
+    "basics": [
+      {
+        "name": "namePrefix",
+        "type": "Microsoft.Common.TextBox",
+        "label": "Resource name prefix",
+        "defaultValue": "cowork",
+        "toolTip": "Short prefix (lowercase, starts with a letter) used to name every resource.",
+        "constraints": {
+          "required": true,
+          "validations": [
+            {
+              "regex": "^[a-z][a-z0-9]{1,11}$",
+              "message": "2-12 lowercase letters or numbers, starting with a letter."
+            }
+          ]
+        }
+      }
+    ],
+    "steps": [
+      {
+        "name": "app",
+        "label": "Application",
+        "elements": [
+          {
+            "name": "adminUsername",
+            "type": "Microsoft.Common.TextBox",
+            "label": "Dashboard admin username",
+            "defaultValue": "admin",
+            "toolTip": "Username for the first sign-in to the dashboard.",
+            "constraints": {
+              "required": true,
+              "validations": [
+                {
+                  "regex": "^[A-Za-z0-9._-]{3,32}$",
+                  "message": "3-32 characters: letters, numbers, dot, underscore or hyphen."
+                }
+              ]
+            }
+          },
+          {
+            "name": "adminPassword",
+            "type": "Microsoft.Common.PasswordBox",
+            "label": {
+              "password": "Dashboard admin password",
+              "confirmPassword": "Confirm password"
+            },
+            "toolTip": "Password for the first sign-in. Use at least 8 characters with a mix of types.",
+            "constraints": {
+              "required": true,
+              "regex": "^.{8,}$",
+              "validationMessage": "At least 8 characters."
+            },
+            "options": {
+              "hideConfirmation": false
+            }
+          }
+        ]
+      },
+      {
+        "name": "advanced",
+        "label": "Advanced",
+        "elements": [
+          {
+            "name": "advancedInfo",
+            "type": "Microsoft.Common.InfoBox",
+            "visible": true,
+            "options": {
+              "icon": "Info",
+              "text": "Defaults are fine for most deployments. The image tag controls which published build is deployed."
+            }
+          },
+          {
+            "name": "imageTag",
+            "type": "Microsoft.Common.TextBox",
+            "label": "Image tag",
+            "defaultValue": "latest",
+            "toolTip": "Container image tag to deploy (e.g. 'latest' or a version tag).",
+            "constraints": {
+              "required": true,
+              "validations": [
+                {
+                  "regex": "^[A-Za-z0-9._-]{1,64}$",
+                  "message": "A valid image tag."
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "auth",
+        "label": "Authentication",
+        "elements": [
+          {
+            "name": "authInfo",
+            "type": "Microsoft.Common.InfoBox",
+            "visible": true,
+            "options": {
+              "icon": "Info",
+              "text": "By default the dashboard is protected by the admin password you set. You can additionally enable Entra ID single sign-on so colleagues can view it with their work account (read-only). You can turn this on now, or later from the api Container App's Authentication blade — leave it off to decide later."
+            }
+          },
+          {
+            "name": "enableEntraAuth",
+            "type": "Microsoft.Common.OptionsGroup",
+            "label": "Enable Entra ID single sign-on",
+            "defaultValue": "No (admin password only)",
+            "toolTip": "When enabled, signed-in Entra users get a read-only viewer role. Administration stays behind the password.",
+            "constraints": {
+              "required": true,
+              "allowedValues": [
+                { "label": "No (admin password only)", "value": "false" },
+                { "label": "Yes (add Entra SSO)", "value": "true" }
+              ]
+            }
+          },
+          {
+            "name": "entraClientId",
+            "type": "Microsoft.Common.TextBox",
+            "label": "App registration client ID",
+            "toolTip": "Application (client) ID of the Entra app registration used for sign-in. You can reuse the reporter's own app registration.",
+            "visible": "[equals(steps('auth').enableEntraAuth, 'true')]",
+            "constraints": {
+              "required": "[equals(steps('auth').enableEntraAuth, 'true')]",
+              "validations": [
+                {
+                  "regex": "^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$",
+                  "message": "A GUID, e.g. 00000000-0000-0000-0000-000000000000."
+                }
+              ]
+            }
+          },
+          {
+            "name": "entraClientSecret",
+            "type": "Microsoft.Common.PasswordBox",
+            "label": {
+              "password": "App registration client secret",
+              "confirmPassword": "Confirm client secret"
+            },
+            "toolTip": "A client secret value for the sign-in app registration.",
+            "visible": "[equals(steps('auth').enableEntraAuth, 'true')]",
+            "constraints": {
+              "required": "[equals(steps('auth').enableEntraAuth, 'true')]"
+            },
+            "options": { "hideConfirmation": true }
+          },
+          {
+            "name": "entraTenantId",
+            "type": "Microsoft.Common.TextBox",
+            "label": "Directory (tenant) ID",
+            "defaultValue": "[subscription().tenantId]",
+            "toolTip": "Tenant that issues sign-in tokens. Defaults to the deployment tenant.",
+            "visible": "[equals(steps('auth').enableEntraAuth, 'true')]",
+            "constraints": {
+              "required": "[equals(steps('auth').enableEntraAuth, 'true')]",
+              "validations": [
+                {
+                  "regex": "^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$",
+                  "message": "A GUID, e.g. 00000000-0000-0000-0000-000000000000."
+                }
+              ]
+            }
+          },
+          {
+            "name": "entraRedirectNote",
+            "type": "Microsoft.Common.InfoBox",
+            "visible": "[equals(steps('auth').enableEntraAuth, 'true')]",
+            "options": {
+              "icon": "Warning",
+              "text": "After deployment, add the redirect URI shown in the deployment's 'entraRedirectUriToRegister' output to your app registration (Authentication → Web). If you gate access by a security group, also add a groups claim under the app registration's Token configuration."
+            }
+          }
+        ]
+      }
+    ],
+    "outputs": {
+      "location": "[location()]",
+      "namePrefix": "[basics('namePrefix')]",
+      "adminUsername": "[steps('app').adminUsername]",
+      "adminPassword": "[steps('app').adminPassword]",
+      "imageTag": "[steps('advanced').imageTag]",
+      "enableEntraAuth": "[bool(steps('auth').enableEntraAuth)]",
+      "entraClientId": "[if(equals(steps('auth').enableEntraAuth, 'true'), steps('auth').entraClientId, '')]",
+      "entraClientSecret": "[if(equals(steps('auth').enableEntraAuth, 'true'), steps('auth').entraClientSecret, '')]",
+      "entraTenantId": "[if(equals(steps('auth').enableEntraAuth, 'true'), steps('auth').entraTenantId, subscription().tenantId)]"
+    }
+  }
+}

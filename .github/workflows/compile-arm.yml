@@ -1,0 +1,41 @@
+name: Compile ARM template
+
+# Keeps infra/azuredeploy.json in sync with the Bicep sources. The "Deploy to
+# Azure" button points at the raw azuredeploy.json, which cannot reference remote
+# Bicep, so it must be a compiled ARM artefact. This workflow recompiles it and
+# commits any drift.
+#
+# NOTE: azuredeploy.json is authored directly (public-image ARM path) and is the
+# source of truth for the Deploy button. This job validates it parses and that
+# the azd Bicep still builds; it does not overwrite azuredeploy.json.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "infra/**.bicep"
+      - "infra/azuredeploy.json"
+      - ".github/workflows/compile-arm.yml"
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Bicep
+        run: |
+          curl -Lo bicep https://github.com/Azure/bicep/releases/latest/download/bicep-linux-x64
+          chmod +x bicep && sudo mv bicep /usr/local/bin/bicep
+          bicep --version
+
+      - name: Build Bicep (azd path)
+        run: bicep build infra/main.bicep --outfile /tmp/main.compiled.json
+
+      - name: Validate azuredeploy.json parses
+        run: python -c "import json,sys; json.load(open('infra/azuredeploy.json')); print('azuredeploy.json OK')"
+
+      - name: Validate createUiDefinition.json parses
+        run: python -c "import json,sys; json.load(open('infra/createUiDefinition.json')); print('createUiDefinition.json OK')"
