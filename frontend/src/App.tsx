@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import Layout from "./components/Layout";
 import { useAuth } from "./auth/AuthContext";
+import { useSetupStatus } from "./hooks/useSetupStatus";
 import LoginPage from "./pages/LoginPage";
 import OverviewPage from "./pages/OverviewPage";
 import ConsumptionPage from "./pages/ConsumptionPage";
@@ -14,10 +15,11 @@ import AboutPage from "./pages/AboutPage";
 
 export default function App() {
   const { user, loading } = useAuth();
+  const { configured, checked } = useSetupStatus(Boolean(user));
 
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center text-slate-500">
+      <div className="flex h-full items-center justify-center text-slate-500 dark:text-slate-400">
         Loading…
       </div>
     );
@@ -30,10 +32,18 @@ export default function App() {
   const adminOnly = (el: JSX.Element) =>
     user.role === "admin" ? el : <Navigate to="/" replace />;
 
+  // First run: send admins straight to Settings (where the wizard opens itself)
+  // until a connection is configured. Non-admins carry on to the dashboards and
+  // see the usual empty states.
+  const needsSetup = checked && !configured && user.role === "admin";
+
   return (
     <Layout>
       <Routes>
-        <Route path="/" element={<OverviewPage />} />
+        <Route
+          path="/"
+          element={needsSetup ? <Navigate to="/settings" replace /> : <OverviewPage />}
+        />
         <Route path="/consumption" element={<ConsumptionPage />} />
         <Route path="/usage" element={<UsagePage />} />
         <Route path="/users" element={<UsersPage />} />

@@ -90,7 +90,7 @@ export default function UsagePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-slate-800 dark:text-slate-100">
+        <h1 className="text-2xl font-bold">
           Usage
         </h1>
         <p className="text-sm text-slate-500 dark:text-slate-400">

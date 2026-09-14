@@ -2,10 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: light;
-}
-
 html,
 body,
 #root {
@@ -13,49 +9,23 @@ body,
 }
 
 body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
-    Arial, sans-serif;
-  @apply bg-slate-50 text-slate-800;
+  @apply bg-slate-50 text-slate-900 antialiased dark:bg-slate-900 dark:text-slate-100;
 }
 
-.dark body {
-  @apply bg-slate-950 text-slate-100;
+@layer components {
+  .card {
+    @apply rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800;
+  }
+  .input {
+    @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500;
+  }
+  .btn-primary {
+    @apply rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60;
+  }
+  .btn-secondary {
+    @apply rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700;
+  }
+  .muted {
+    @apply text-slate-500 dark:text-slate-400;
+  }
 }
-
-/* Keep form controls readable in both themes. */
-input,
-select,
-textarea {
-  color-scheme: light;
-  @apply bg-white text-slate-800;
-}
-
-.dark input,
-.dark select,
-.dark textarea {
-  color-scheme: dark;
-  @apply border-slate-700 bg-slate-800 text-slate-100;
-}
-
-/* Scoped dark-mode fallbacks: catch page content that sets explicit light text /
-   border / bg utilities so every page reads correctly in dark mode without
-   annotating each element. Descendant selectors outrank single-class utilities. */
-.dark main .text-slate-800 { @apply text-slate-100; }
-.dark main .text-slate-700 { @apply text-slate-200; }
-.dark main .text-slate-600 { @apply text-slate-300; }
-.dark main .text-slate-500 { @apply text-slate-400; }
-.dark main .text-brand-700 { @apply text-brand-300; }
-.dark main .text-brand-600 { @apply text-brand-400; }
-.dark main .border-slate-300 { @apply border-slate-600; }
-.dark main .border-slate-200 { @apply border-slate-700; }
-.dark main .border-slate-100 { @apply border-slate-800; }
-.dark main .bg-slate-50 { @apply bg-slate-800/60; }
-.dark main .bg-white { @apply bg-slate-900; }
-.dark main .bg-brand-50 { @apply bg-brand-500/15; }
-
-/* Secondary (bordered/ghost) buttons: give them a visible surface in dark mode
-   instead of rendering as a bright transparent box. */
-.dark main button.border { @apply bg-slate-800 text-slate-100; }
-.dark main button.border:hover { @apply bg-slate-700; }
-.dark main .hover\:bg-slate-100:hover { @apply bg-slate-700; }

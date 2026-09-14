@@ -38,8 +38,8 @@ export default function ConsumptionPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-slate-800">Consumption</h1>
-        <p className="text-sm text-slate-500">
+        <h1 className="text-2xl font-bold">Consumption</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400">
           Azure spend (automated) and Copilot credit consumption. Dollars, not tasks.
         </p>
       </div>
@@ -86,7 +86,7 @@ export default function ConsumptionPage() {
           </ResponsiveContainer>
           <table className="mt-4 w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-200 text-left text-slate-500">
+              <tr className="border-b border-slate-200 text-left text-slate-500 dark:text-slate-400 dark:border-slate-700">
                 <th className="py-2">Resource group</th>
                 <th>Cost centre</th>
                 <th>Project</th>
@@ -95,7 +95,7 @@ export default function ConsumptionPage() {
             </thead>
             <tbody>
               {byGroup.map((r) => (
-                <tr key={r.resource_group} className="border-b border-slate-100">
+                <tr key={r.resource_group} className="border-b border-slate-100 dark:border-slate-800">
                   <td className="py-2 font-mono text-xs">{r.resource_group || "—"}</td>
                   <td>{r.cost_centre || <span className="text-amber-600">unmapped</span>}</td>
                   <td>{r.project || "—"}</td>
@@ -104,7 +104,7 @@ export default function ConsumptionPage() {
               ))}
             </tbody>
           </table>
-          <p className="mt-3 text-xs text-slate-400">
+          <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
             Unmapped resource groups appear in the Chargeback admin page — map them to a
             cost centre there.
           </p>

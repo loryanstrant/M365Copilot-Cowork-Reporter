@@ -1,17 +1,111 @@
-import { Card } from "../components/Card";
+import { useEffect, useState } from "react";
+import { api } from "../api/client";
+import { Card, Kpi } from "../components/Card";
+import SuiteBlock from "../components/SuiteBlock";
+
+interface AboutMeta {
+  version: string;
+  build_date: string;
+  build_time: string;
+}
+
+interface Freshness {
+  cowork_events: number;
+  cowork_usage_rows: number;
+  daily_cost_rows: number;
+  directory_users: number;
+  earliest_event: string | null;
+  latest_event: string | null;
+  earliest_cost: string | null;
+  latest_cost: string | null;
+  last_run: { status: string; started_at: string | null; finished_at: string | null } | null;
+}
+
+function fmtDay(value: string | null): string {
+  if (!value) return "—";
+  const t = Date.parse(value);
+  if (Number.isNaN(t)) return value;
+  return new Date(t).toLocaleDateString();
+}
+
+function fmtDateTime(value: string | null): string {
+  if (!value) return "—";
+  const t = Date.parse(value);
+  if (Number.isNaN(t)) return value;
+  return new Date(t).toLocaleString();
+}
 
 export default function AboutPage() {
+  const [meta, setMeta] = useState<AboutMeta | null>(null);
+  const [fresh, setFresh] = useState<Freshness | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        setMeta(await api<AboutMeta>("/metrics/about"));
+      } catch {
+        /* ignore */
+      }
+      try {
+        setFresh(await api<Freshness>("/metrics/freshness"));
+      } catch {
+        /* ignore */
+      }
+    })();
+  }, []);
+
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-slate-800 dark:text-slate-100">About</h1>
+      <div>
+        <h1 className="text-2xl font-bold">About</h1>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          What this tool does, how fresh the data is, and how the numbers are calculated.
+        </p>
+      </div>
 
-      <Card title="What this reports">
+      <Card title="What this is">
         <p className="text-sm text-slate-600 dark:text-slate-300">
           Microsoft 365 Copilot Cowork has no single reporting API. This app is a{" "}
           <strong>collector</strong> that joins the available sources into one durable
           store and presents <strong>Consumption</strong> and <strong>Usage</strong> as
           separate views (joined on user, never blended — dollars vs task counts).
         </p>
+        {meta && (
+          <p className="mt-4 text-xs text-slate-500 dark:text-slate-400">
+            Version{" "}
+            <span className="font-semibold text-slate-700 dark:text-slate-200">
+              {meta.version}
+            </span>{" "}
+            · built{" "}
+            {new Date(meta.build_date).toLocaleDateString(undefined, {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            })}
+            {meta.build_time ? ` at ${meta.build_time}` : ""}
+          </p>
+        )}
+      </Card>
+
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <Kpi label="Cowork events" value={String(fresh?.cowork_events ?? "—")} />
+        <Kpi label="Usage rows" value={String(fresh?.cowork_usage_rows ?? "—")} />
+        <Kpi label="Cost rows" value={String(fresh?.daily_cost_rows ?? "—")} />
+        <Kpi label="Directory users" value={String(fresh?.directory_users ?? "—")} />
+      </div>
+
+      <Card title="Data freshness">
+        <dl className="grid gap-3 text-sm sm:grid-cols-2">
+          <Row label="Earliest audit event" value={fmtDay(fresh?.earliest_event ?? null)} />
+          <Row label="Most recent audit event" value={fmtDay(fresh?.latest_event ?? null)} />
+          <Row label="Earliest cost date" value={fmtDay(fresh?.earliest_cost ?? null)} />
+          <Row label="Most recent cost date" value={fmtDay(fresh?.latest_cost ?? null)} />
+          <Row
+            label="Last run"
+            value={fresh?.last_run ? fmtDateTime(fresh.last_run.finished_at) : "—"}
+          />
+          <Row label="Run status" value={fresh?.last_run?.status ?? "No run yet"} />
+        </dl>
       </Card>
 
       <Card title="Data sources">
@@ -24,11 +118,11 @@ export default function AboutPage() {
             </tr>
           </thead>
           <tbody className="text-slate-600 dark:text-slate-300">
-            <Row s="Azure spend by resource group" src="Cost Management Query API" mode="Automated" auto />
-            <Row s="Cowork events / resources touched" src="Purview audit (CopilotInteraction)" mode="Automated" auto />
-            <Row s="Org context (dept, cost centre)" src="Microsoft Graph users" mode="Automated" auto />
-            <Row s="Cowork tasks / adoption" src="Admin centre Cowork usage report" mode="CSV upload" />
-            <Row s="Copilot credit consumption" src="Admin centre Cost Management" mode="CSV upload" />
+            <SourceRow s="Azure spend by resource group" src="Cost Management Query API" mode="Automated" auto />
+            <SourceRow s="Cowork events / resources touched" src="Purview audit (CopilotInteraction)" mode="Automated" auto />
+            <SourceRow s="Org context (dept, cost centre)" src="Microsoft Graph users" mode="Automated" auto />
+            <SourceRow s="Cowork tasks / adoption" src="Admin centre Cowork usage report" mode="CSV upload" />
+            <SourceRow s="Copilot credit consumption" src="Admin centre Cost Management" mode="CSV upload" />
           </tbody>
         </table>
         <p className="mt-4 text-xs text-slate-500 dark:text-slate-400">
@@ -37,15 +131,30 @@ export default function AboutPage() {
         </p>
       </Card>
 
-      <Card title="Cowork identification (Purview audit)">
-        <p className="text-sm text-slate-600 dark:text-slate-300">
-          A <code>CopilotInteraction</code> record is treated as Cowork when
-          <code className="mx-1">CopilotEventData.AppHost == "cowork"</code> or
-          <code className="mx-1">AppIdentity == "Copilot.M365Copilot.CoworkChat"</code>.
-          Audit answers <em>who / when / what-touched</em> — not task volume (use Usage)
-          or cost (use Consumption). Prompt text is never stored.
-        </p>
+      <Card title="Methodology">
+        <ul className="list-inside list-disc space-y-2 text-sm text-slate-600 dark:text-slate-300">
+          <li>
+            <span className="font-medium">Consumption</span> is Azure spend plus Copilot
+            credit consumption. <span className="font-medium">Usage</span> is task counts
+            and adoption. The two are joined on user, never summed together.
+          </li>
+          <li>
+            A <code>CopilotInteraction</code> record counts as Cowork when
+            <code className="mx-1">CopilotEventData.AppHost == "cowork"</code> or
+            <code className="mx-1">AppIdentity == "Copilot.M365Copilot.CoworkChat"</code>.
+          </li>
+          <li>
+            Audit answers <em>who / when / what-touched</em> — not task volume (use Usage)
+            or cost (use Consumption). <strong>Prompt text is never stored.</strong>
+          </li>
+          <li>
+            Cost restates as charges settle, so the collector re-pulls and replaces a
+            rolling window rather than trusting the first figure it sees.
+          </li>
+        </ul>
       </Card>
+
+      <SuiteBlock />
 
       <Card>
         <div className="flex items-center gap-4">
@@ -92,7 +201,16 @@ export default function AboutPage() {
   );
 }
 
-function Row({
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between border-b border-slate-100 pb-2 dark:border-slate-700">
+      <dt className="text-slate-500 dark:text-slate-400">{label}</dt>
+      <dd className="font-medium text-slate-800 dark:text-slate-100">{value}</dd>
+    </div>
+  );
+}
+
+function SourceRow({
   s,
   src,
   mode,
