@@ -88,7 +88,7 @@ function UploadCard({
     }
   }
 
-  const field = "w-full rounded-md border border-slate-300 px-3 py-2 text-sm";
+  const field = "input";
 
   return (
     <Card title={title}>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import type { AppConfig, TestConnection } from "../api/types";
 import { Card } from "../components/Card";
@@ -106,16 +107,23 @@ export default function SettingsPage() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Settings</h1>
 
-      <SetupWizard defaultOpen={!cfg.configured} />
+      <DemoDataCard />
 
-      <div className="rounded-md bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:text-brand-300 dark:bg-brand-500/15">
-        New here? See the{" "}
-        <a href="/help" className="font-medium underline">
-          Setup guide
-        </a>{" "}
-        for app-registration permissions, granting Cost Management Reader, and exporting
-        the admin-centre CSVs.
+      <div className="card p-5">
+        <h3 className="mb-1 font-semibold text-slate-900 dark:text-slate-100">Setup guide</h3>
+        <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">
+          App-registration permissions, granting Cost Management Reader, and exporting the
+          admin-centre CSVs — plus what to check when something looks wrong.
+        </p>
+        <Link
+          to="/help"
+          className="inline-flex items-center gap-1 rounded-lg border border-brand-300 bg-brand-50 px-4 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-100 dark:border-brand-700 dark:bg-brand-900/20 dark:text-brand-400"
+        >
+          Open setup guide →
+        </Link>
       </div>
+
+      <SetupWizard defaultOpen={!cfg.configured} />
 
       <Card title="App registration (Graph + Azure)">
         <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
@@ -268,8 +276,6 @@ export default function SettingsPage() {
 
       {msg && <div className="text-sm text-slate-600 dark:text-slate-300">{msg}</div>}
 
-      <DemoDataCard />
-
       {test && (
         <Card title="Connection test">
           <ul className="space-y-1 text-sm">
@@ -300,16 +306,13 @@ export default function SettingsPage() {
             </label>
             <input
               type="number"
-              className="w-56 rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-600"
+              className="input w-56"
               value={backfillDays}
               onChange={(e) => setBackfillDays(e.target.value)}
               placeholder="e.g. 120"
             />
           </div>
-          <button
-            onClick={runBackfill}
-            className="rounded-md border border-slate-300 px-4 py-2 text-sm hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-700"
-          >
+          <button onClick={runBackfill} className="btn-secondary">
             Run backfill
           </button>
         </div>
