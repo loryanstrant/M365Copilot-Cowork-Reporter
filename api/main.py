@@ -53,8 +53,14 @@ async def lifespan(_: FastAPI):
             from shared.migrate import upgrade_to_head
 
             upgrade_to_head()
-        except Exception as exc:  # pragma: no cover - startup diagnostics
+        except Exception as exc:
+            # Do not swallow this. Alembic runs the chain in one transaction, so
+            # a mid-chain failure rolls the whole thing back and leaves the
+            # database with no tables at all. Carrying on would serve a healthy
+            # looking app over an empty schema, which is far harder to diagnose
+            # than refusing to start.
             logger.error("Migration on startup failed: %s", exc)
+            raise
     try:
         await _seed_admin_from_env()
     except Exception as exc:  # pragma: no cover - startup diagnostics
@@ -75,22 +81,41 @@ app = FastAPI(
 
 @app.get("/health", tags=["system"])
 async def health() -> JSONResponse:
-    """Liveness/readiness probe: 200 only when the database is reachable."""
+    """Liveness/readiness probe: 200 only when the database is usable.
+
+    ``SELECT 1`` alone is not enough. It succeeds against a completely empty
+    database, so an instance whose migrations never ran would report healthy
+    while every route that touches a table returns 500 — which is exactly how
+    issue #3 stayed invisible. Check that the schema is actually there.
+    """
     db_ok = False
+    schema_ok = False
     detail = "ok"
     try:
         async with engine.connect() as conn:
             await conn.execute(text("SELECT 1"))
-        db_ok = True
+            db_ok = True
+            # app_config is created by the very first migration, so its absence
+            # means the schema was never built.
+            await conn.execute(text("SELECT 1 FROM app_config LIMIT 1"))
+            schema_ok = True
     except Exception as exc:  # pragma: no cover
-        detail = f"database unavailable: {exc}"
+        if db_ok:
+            detail = (
+                "database reachable but schema is missing — migrations have not "
+                f"run: {exc}"
+            )
+        else:
+            detail = f"database unavailable: {exc}"
         logger.warning("Health check failed: %s", detail)
 
+    healthy = db_ok and schema_ok
     return JSONResponse(
-        status_code=200 if db_ok else 503,
+        status_code=200 if healthy else 503,
         content={
-            "status": "ok" if db_ok else "degraded",
+            "status": "ok" if healthy else "degraded",
             "database": db_ok,
+            "schema": schema_ok,
             "environment": settings.app_env,
             "detail": detail,
         },

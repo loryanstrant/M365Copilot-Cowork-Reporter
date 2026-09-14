@@ -97,3 +97,39 @@ async def test_billing_policy_crud(client):
     assert r.json()["resource_group"] == "rg-cowork"  # normalised
     r2 = await client.get("/admin/billing-policies", headers=hdr)
     assert len(r2.json()) == 1
+
+
+# --------------------------------------------------------------------------- #
+# Health check honesty
+#
+# Regression cover for issue #3: a database that is reachable but has no schema
+# must not report healthy. Previously /health ran only SELECT 1, which succeeds
+# against an empty database, so an instance whose migrations had rolled back
+# looked fine while every real route returned 500.
+# --------------------------------------------------------------------------- #
+@pytest.mark.asyncio
+async def test_health_reports_degraded_when_schema_is_missing(client):
+    from shared.db import Base, engine
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+
+    r = await client.get("/health")
+    body = r.json()
+
+    assert r.status_code == 503
+    assert body["status"] == "degraded"
+    # The database itself is fine — it is the schema that is absent, and the
+    # response needs to say so rather than blaming connectivity.
+    assert body["database"] is True
+    assert body["schema"] is False
+    assert "schema is missing" in body["detail"]
+
+
+@pytest.mark.asyncio
+async def test_health_is_ok_once_the_schema_exists(client):
+    r = await client.get("/health")
+    body = r.json()
+    assert r.status_code == 200
+    assert body["status"] == "ok"
+    assert body["schema"] is True
