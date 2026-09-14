@@ -14,12 +14,19 @@ export default function SettingsPage() {
   const [busy, setBusy] = useState(false);
   const [backfillDays, setBackfillDays] = useState<string>("");
   const [progress, setProgress] = useState<Record<string, unknown> | null>(null);
+  const [redirectUri, setRedirectUri] = useState("");
 
   useEffect(() => {
     (async () => {
       const c = await api<AppConfig>("/admin/config");
       setCfg(c);
       setSubs((c.azure_subscription_ids || []).join(", "));
+      try {
+        const auth = await api<{ redirect_uri: string }>("/auth/config");
+        setRedirectUri(auth.redirect_uri);
+      } catch {
+        /* non-fatal: the sign-in card just won't show a URI to copy */
+      }
     })();
   }, []);
 
@@ -151,6 +158,41 @@ export default function SettingsPage() {
               value={subs}
               onChange={(e) => setSubs(e.target.value)}
               placeholder="00000000-0000-0000-0000-000000000000"
+            />
+          </div>
+        </div>
+      </Card>
+
+      <Card title="Sign in with Microsoft (optional)">
+        <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">
+          Lets colleagues sign in with their work account as read-only viewers. It reuses
+          the app registration above, so there is nothing extra to create — you only need
+          to register the redirect URI below. Administration stays behind the admin
+          password.
+        </p>
+        <div className="grid gap-4">
+          <div>
+            <label className={label}>
+              Redirect URI — add this to your app registration under Authentication → Web
+            </label>
+            <input
+              className={`${field} font-mono text-xs`}
+              value={redirectUri}
+              readOnly
+              onFocus={(e) => e.currentTarget.select()}
+            />
+          </div>
+          <div>
+            <label className={label}>
+              Restrict viewers to this security group (optional, group object ID)
+            </label>
+            <input
+              className={field}
+              value={cfg.report_access_group_id || ""}
+              onChange={(e) =>
+                setCfg({ ...cfg, report_access_group_id: e.target.value })
+              }
+              placeholder="Leave blank to allow anyone in your tenant"
             />
           </div>
         </div>

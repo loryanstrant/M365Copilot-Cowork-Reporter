@@ -53,8 +53,9 @@ Azure RBAC: `Cost Management Reader` on each subscription in scope.
 
 ## Security & auth
 
-- Admin password gate by default; optional Entra SSO (Container Apps Easy Auth) grants read-only
-  viewer access.
+- Admin password gate by default; optional Entra SSO grants read-only viewer access. Sign-in is
+  run by the app itself (`api/oidc.py`, OIDC auth-code + PKCE via MSAL), not by the hosting
+  platform, so it works identically on and off Azure.
 - The client secret is **Fernet-encrypted at rest and write-only in the API** — it can be set and
   replaced, never read back. Never log it or return it in a response.
 - Never commit secrets. `.env`, `.azure/` and `*.local` are gitignored.
