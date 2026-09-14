@@ -68,23 +68,32 @@ To evaluate without a tenant connection, use **Settings → Demo data → Load d
 
 ## Entra single sign-on (optional)
 
-The dashboard is protected by the admin password by default. Easy Auth adds read-only viewer
-sign-in with work accounts while administration stays behind the password.
+The dashboard is protected by the admin password by default. Entra sign-in adds read-only viewer
+access with work accounts, while administration stays behind the password.
 
-**Prerequisite:** an Entra app registration for sign-in (you can reuse the reporter's own). Note its
-**Application (client) ID** and create a **client secret**. After deployment, add the redirect URI
-`https://<your-dashboardUrl>/.auth/login/aad/callback` under **Authentication → Web**. To restrict
-viewers to a security group, also add a **groups** claim under **Token configuration**.
+Sign-in is performed by the app itself rather than by the hosting platform, so it behaves the same
+on Azure Container Apps, Docker on any host, or Kubernetes. Nothing needs configuring on the
+platform, and there is no deploy-time setting for it.
 
-**At deploy time:** on the Deploy to Azure form, open the **Authentication** tab, set **Enable Entra
-ID single sign-on = Yes**, and paste the client ID, client secret and (optionally) tenant ID.
+**Prerequisite:** none beyond the app registration you already created for collecting data — the
+same one is reused for sign-in.
 
-**After deployment:** open the `…-api-…` Container App → **Settings → Authentication** → **Add
-identity provider** → **Microsoft**, use the client ID and secret, and set *unauthenticated
-requests* to **Allow**.
+**Setup, after deployment:**
 
-Once enabled, the sign-in page shows a **Sign in with Microsoft** button and returning users are
-signed in silently.
+1. Sign in as the admin and open **Settings**.
+2. Copy the **redirect URI** shown there (it is
+   `https://<your-dashboardUrl>/auth/oidc/callback`).
+3. In the Entra portal, open the app registration → **Authentication → Add a platform → Web** and
+   paste that redirect URI.
+4. To restrict viewers to a security group, set the group in **Settings** and add a **groups** claim
+   under **Token configuration** on the app registration.
+
+Once the app registration details are saved, the sign-in page shows a **Sign in with Microsoft**
+button.
+
+**Behind a reverse proxy:** the app derives its public address from the request, honouring
+`X-Forwarded-Proto` / `X-Forwarded-Host`. If your proxy does not send those, set `PUBLIC_BASE_URL`
+(for example `https://reports.contoso.com`) so the redirect URI matches what you registered.
 
 ## Updating a deployment
 

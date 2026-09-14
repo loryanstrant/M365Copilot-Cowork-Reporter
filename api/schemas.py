@@ -24,8 +24,9 @@ class UserOut(BaseModel):
     role: str
 
 
-class AuthModeOut(BaseModel):
-    entra_available: bool
+class AuthConfigOut(BaseModel):
+    entra_enabled: bool
+    redirect_uri: str
 
 
 # --- admin config -------------------------------------------------------
