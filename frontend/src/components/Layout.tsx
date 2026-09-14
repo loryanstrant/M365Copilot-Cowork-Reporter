@@ -3,16 +3,26 @@ import type { ReactNode } from "react";
 import { useAuth } from "../auth/AuthContext";
 import { useTheme } from "../theme/ThemeContext";
 
-const NAV = [
-  { to: "/", label: "Overview", end: true, admin: false },
-  { to: "/consumption", label: "Consumption", admin: false },
-  { to: "/usage", label: "Usage", admin: false },
-  { to: "/users", label: "Tenant users", admin: false },
-  { to: "/upload", label: "Upload CSV", admin: true },
-  { to: "/billing-policies", label: "Chargeback", admin: true },
-  { to: "/settings", label: "Settings", admin: true },
-  { to: "/help", label: "Setup guide", admin: false },
-  { to: "/about", label: "About", admin: false },
+// Sidebar sections: "You" is the personal view, "Organisation" is everything
+// tenant-wide and only appears for people allowed to see it.
+const PERSONAL_NAV = [{ to: "/me", label: "Your activity" }];
+
+const ORG_NAV = [
+  { to: "/overview", label: "Overview" },
+  { to: "/consumption", label: "Consumption" },
+  { to: "/usage", label: "Usage" },
+  { to: "/users", label: "Tenant users" },
+];
+
+const ADMIN_NAV = [
+  { to: "/upload", label: "Upload CSV" },
+  { to: "/billing-policies", label: "Chargeback" },
+  { to: "/settings", label: "Settings" },
+];
+
+const HELP_NAV = [
+  { to: "/help", label: "Setup guide" },
+  { to: "/about", label: "About" },
 ];
 
 function navClass({ isActive }: { isActive: boolean }): string {
@@ -24,10 +34,18 @@ function navClass({ isActive }: { isActive: boolean }): string {
   ].join(" ");
 }
 
+/** Groups the sidebar into "You" and "Organisation" so the split is obvious. */
+function NavSectionLabel({ children }: { children: ReactNode }) {
+  return (
+    <div className="px-3 pb-1 pt-4 text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+      {children}
+    </div>
+  );
+}
+
 export default function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const { theme, toggle } = useTheme();
-  const items = NAV.filter((n) => !n.admin || user?.role === "admin");
 
   return (
     <div className="flex h-full">
@@ -44,8 +62,42 @@ export default function Layout({ children }: { children: ReactNode }) {
           </div>
         </div>
         <nav className="flex-1 space-y-1 px-3">
-          {items.map((n) => (
-            <NavLink key={n.to} to={n.to} end={n.end} className={navClass}>
+          {user?.has_personal_view && (
+            <>
+              <NavSectionLabel>You</NavSectionLabel>
+              {PERSONAL_NAV.map((n) => (
+                <NavLink key={n.to} to={n.to} className={navClass}>
+                  {n.label}
+                </NavLink>
+              ))}
+            </>
+          )}
+
+          {user?.can_view_org && (
+            <>
+              <NavSectionLabel>Organisation</NavSectionLabel>
+              {ORG_NAV.map((n) => (
+                <NavLink key={n.to} to={n.to} className={navClass}>
+                  {n.label}
+                </NavLink>
+              ))}
+            </>
+          )}
+
+          {user?.role === "admin" && (
+            <>
+              <NavSectionLabel>Administration</NavSectionLabel>
+              {ADMIN_NAV.map((n) => (
+                <NavLink key={n.to} to={n.to} className={navClass}>
+                  {n.label}
+                </NavLink>
+              ))}
+            </>
+          )}
+
+          <NavSectionLabel>Help</NavSectionLabel>
+          {HELP_NAV.map((n) => (
+            <NavLink key={n.to} to={n.to} className={navClass}>
               {n.label}
             </NavLink>
           ))}

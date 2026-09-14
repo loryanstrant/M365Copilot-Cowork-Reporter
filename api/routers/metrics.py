@@ -1,22 +1,39 @@
-"""Reporting/metrics routes (any authenticated user).
+"""Reporting/metrics routes.
 
 Consumption and Usage are exposed as separate resources and never blended into a
 single measure — they join on user, not on resource group (dollars vs task counts).
+
+Routes are split by who may see what:
+
+``router`` — organisation-wide data. Gated by :func:`require_org_view`, so it
+needs both a valid token and membership of the configured organisation-view
+group (admins always pass).
+
+``common_router`` — data any signed-in user may see regardless of that group:
+data freshness and build info.
+
+``me_router`` — the personal view. Every route derives the person from the
+token, never from a client-supplied id, so one user cannot read another's data
+by editing a URL.
 """
 from __future__ import annotations
 
 from datetime import date, timedelta
 
-from fastapi import APIRouter, Depends, Query
-from sqlalchemy import func, select
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.auth import get_current_user
+from api.auth import CurrentUser, get_current_user, require_org_view
 from api.schemas import (
     CostByGroupOut,
     CostTrendOut,
     DirectoryUserOut,
     KpiOut,
+    MyComparisonOut,
+    MyEventOut,
+    MySummaryOut,
+    MyUsageTrendOut,
     UsageByUserOut,
     UsageTrendOut,
 )
@@ -31,8 +48,14 @@ from shared.models import (
 )
 
 router = APIRouter(
+    prefix="/metrics", tags=["metrics"], dependencies=[Depends(require_org_view)]
+)
+
+common_router = APIRouter(
     prefix="/metrics", tags=["metrics"], dependencies=[Depends(get_current_user)]
 )
+
+me_router = APIRouter(prefix="/metrics/me", tags=["metrics", "personal"])
 
 
 def _default_window(days: int) -> date:
@@ -284,7 +307,7 @@ async def usage_trend(
     ]
 
 
-@router.get("/about")
+@common_router.get("/about")
 async def get_about() -> dict:
     """Version and build metadata for the About page."""
     from shared.version import APP_VERSION, BUILD_DATE, BUILD_TIME
@@ -296,7 +319,7 @@ async def get_about() -> dict:
     }
 
 
-@router.get("/freshness")
+@common_router.get("/freshness")
 async def get_freshness(session: AsyncSession = Depends(get_session)) -> dict:
     """Data-freshness summary for the About page.
 
@@ -339,3 +362,280 @@ async def get_freshness(session: AsyncSession = Depends(get_session)) -> dict:
             else None
         ),
     }
+
+# --------------------------------------------------------------------------- #
+# Personal view
+#
+# Every route here scopes to the signed-in person using the identity carried in
+# their token. There is deliberately no "which user?" parameter: if the caller
+# could name the user, any viewer could read anyone's activity by editing a URL.
+#
+# Cowork facts are keyed two different ways — audit events carry the Entra
+# object ID, while the admin-centre usage and credit exports only carry a UPN —
+# so both claims are used, and the UPN is recovered from dim_user when the token
+# does not carry one.
+# --------------------------------------------------------------------------- #
+async def _me_identity(
+    user: CurrentUser, session: AsyncSession
+) -> tuple[str | None, str | None]:
+    """Resolve the signed-in person to (object ID, UPN), or 404."""
+    if not user.has_personal_view:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=(
+                "There is no personal view for this account. Sign in with your "
+                "work account to see your own activity."
+            ),
+        )
+    oid, upn = user.oid, user.upn
+    if oid and not upn:
+        directory = await session.get(DirectoryUser, oid)
+        upn = directory.upn if directory else None
+    return oid, upn
+
+
+def _my_usage_cond(upn: str | None):
+    """Match the usage snapshot rows belonging to this person.
+
+    UPN casing varies between the directory and the admin-centre exports, so the
+    compare is case-insensitive. Without a UPN nothing can match — and that must
+    mean "no rows", never "all rows".
+    """
+    if not upn:
+        return False
+    return func.lower(CoworkUsage.user_principal_name) == upn.lower()
+
+
+def _my_event_cond(oid: str | None, upn: str | None):
+    """Match the audit events belonging to this person (object ID or UPN)."""
+    parts = []
+    if oid:
+        parts.append(CoworkEvent.user_id == oid)
+    if upn:
+        parts.append(func.lower(CoworkEvent.user_principal_name) == upn.lower())
+    if not parts:
+        return False
+    return or_(*parts)
+
+
+def _my_credit_cond(oid: str | None, upn: str | None):
+    """Match the per-user credit rows belonging to this person.
+
+    The admin-centre export identifies the user in ``scope_id`` (object ID or
+    UPN, depending on the export) and sometimes only in ``scope_name``.
+    """
+    parts = []
+    if oid:
+        parts.append(func.lower(CreditConsumption.scope_id) == oid.lower())
+    if upn:
+        parts.append(func.lower(CreditConsumption.scope_id) == upn.lower())
+        parts.append(func.lower(CreditConsumption.scope_name) == upn.lower())
+    if not parts:
+        return False
+    return or_(*parts)
+
+
+async def _my_latest_period(
+    session: AsyncSession, refresh: date, upn: str | None, days: int
+) -> int | None:
+    """Pick the report period nearest the requested window for this person."""
+    periods = (
+        await session.execute(
+            select(CoworkUsage.report_period)
+            .where(
+                CoworkUsage.report_refresh_date == refresh,
+                _my_usage_cond(upn),
+            )
+            .distinct()
+        )
+    ).scalars().all()
+    periods = [p for p in periods if p is not None]
+    if not periods:
+        return None
+    return min(periods, key=lambda p: abs(p - days))
+
+
+@me_router.get("/summary", response_model=MySummaryOut)
+async def my_summary(
+    days: int = Query(30, ge=1, le=365),
+    user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> MySummaryOut:
+    """This person's own Cowork activity: tasks, sessions and credits."""
+    oid, upn = await _me_identity(user, session)
+
+    display_name: str | None = None
+    if oid:
+        directory = await session.get(DirectoryUser, oid)
+        display_name = directory.display_name if directory else None
+
+    row = None
+    period: int | None = None
+    latest_refresh = await session.scalar(
+        select(func.max(CoworkUsage.report_refresh_date))
+    )
+    if latest_refresh is not None:
+        period = await _my_latest_period(session, latest_refresh, upn, days)
+        row = await session.scalar(
+            select(CoworkUsage).where(
+                CoworkUsage.report_refresh_date == latest_refresh,
+                CoworkUsage.report_period == period,
+                _my_usage_cond(upn),
+            )
+        )
+
+    events = await session.scalar(
+        select(func.count()).select_from(CoworkEvent).where(_my_event_cond(oid, upn))
+    ) or 0
+
+    credits = 0
+    latest_as_of = await session.scalar(select(func.max(CreditConsumption.as_of_date)))
+    if latest_as_of is not None:
+        credits = await session.scalar(
+            select(func.coalesce(func.sum(CreditConsumption.credits_consumed), 0)).where(
+                CreditConsumption.as_of_date == latest_as_of,
+                CreditConsumption.scope_type == "user",
+                _my_credit_cond(oid, upn),
+            )
+        ) or 0
+
+    return MySummaryOut(
+        user_principal_name=upn,
+        display_name=display_name or (row.display_name if row else None),
+        report_period=period,
+        total_tasks=row.total_tasks if row else 0,
+        scheduled_tasks=row.scheduled_tasks if row else 0,
+        user_initiated_tasks=row.user_initiated_tasks if row else 0,
+        active_days=row.active_days if row else 0,
+        last_activity_date=row.last_activity_date if row else None,
+        cowork_events=int(events),
+        credits_consumed=float(credits),
+        has_data=bool(row) or bool(events) or bool(credits),
+    )
+
+
+@me_router.get("/events", response_model=list[MyEventOut])
+async def my_events(
+    limit: int = Query(25, ge=1, le=200),
+    user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> list[MyEventOut]:
+    """This person's most recent Cowork sessions (Purview audit events)."""
+    oid, upn = await _me_identity(user, session)
+    rows = (
+        await session.execute(
+            select(CoworkEvent)
+            .where(_my_event_cond(oid, upn))
+            .order_by(CoworkEvent.created_at.desc())
+            .limit(limit)
+        )
+    ).scalars().all()
+    return [
+        MyEventOut(
+            event_id=e.event_id,
+            created_at=e.created_at,
+            operation=e.operation,
+            app_host=e.app_host,
+            agent_name=e.agent_name,
+            thread_id=e.thread_id,
+            tools=len(e.tools or []),
+            accessed_resources=len(e.accessed_resources or []),
+        )
+        for e in rows
+    ]
+
+
+@me_router.get("/usage-trend", response_model=list[MyUsageTrendOut])
+async def my_usage_trend(
+    user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> list[MyUsageTrendOut]:
+    """This person's tasks by report period for the latest snapshot."""
+    _oid, upn = await _me_identity(user, session)
+    latest_refresh = await session.scalar(
+        select(func.max(CoworkUsage.report_refresh_date))
+    )
+    if latest_refresh is None:
+        return []
+    rows = (
+        await session.execute(
+            select(CoworkUsage)
+            .where(
+                CoworkUsage.report_refresh_date == latest_refresh,
+                CoworkUsage.report_period.isnot(None),
+                _my_usage_cond(upn),
+            )
+            .order_by(CoworkUsage.report_period)
+        )
+    ).scalars().all()
+    return [
+        MyUsageTrendOut(
+            period_days=r.report_period,
+            total_tasks=r.total_tasks,
+            scheduled_tasks=r.scheduled_tasks,
+            user_initiated_tasks=r.user_initiated_tasks,
+            active_days=r.active_days,
+        )
+        for r in rows
+    ]
+
+
+@me_router.get("/comparison", response_model=MyComparisonOut)
+async def my_comparison(
+    days: int = Query(30, ge=1, le=365),
+    user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> MyComparisonOut:
+    """This person's task count against the organisation median.
+
+    Only the aggregate is returned — never another individual's figures — so
+    this stays safe to show to someone without organisation-wide access.
+    """
+    _oid, upn = await _me_identity(user, session)
+
+    latest_refresh = await session.scalar(
+        select(func.max(CoworkUsage.report_refresh_date))
+    )
+    if latest_refresh is None:
+        return MyComparisonOut(
+            my_tasks=0, org_median_tasks=0, people_counted=0, above_median=True
+        )
+
+    period = await _my_latest_period(session, latest_refresh, upn, days)
+    if period is None:
+        period = await _closest_period(session, latest_refresh, days)
+
+    my_tasks = await session.scalar(
+        select(func.coalesce(func.sum(CoworkUsage.total_tasks), 0)).where(
+            CoworkUsage.report_refresh_date == latest_refresh,
+            CoworkUsage.report_period == period,
+            _my_usage_cond(upn),
+        )
+    ) or 0
+
+    counts = sorted(
+        int(c or 0)
+        for c in (
+            await session.execute(
+                select(CoworkUsage.total_tasks).where(
+                    CoworkUsage.report_refresh_date == latest_refresh,
+                    CoworkUsage.report_period == period,
+                    CoworkUsage.total_tasks > 0,
+                )
+            )
+        ).scalars().all()
+    )
+    median = 0
+    if counts:
+        mid = len(counts) // 2
+        median = (
+            counts[mid] if len(counts) % 2 else (counts[mid - 1] + counts[mid]) // 2
+        )
+
+    my_tasks = int(my_tasks)
+    return MyComparisonOut(
+        my_tasks=my_tasks,
+        org_median_tasks=median,
+        people_counted=len(counts),
+        above_median=my_tasks >= median,
+    )
