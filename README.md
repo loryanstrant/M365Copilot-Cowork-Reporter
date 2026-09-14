@@ -146,7 +146,8 @@ from the group takes effect in minutes rather than whenever their token next exp
 - **Upload CSV (admin)** — load the two admin-centre exports that have no API.
 - **Settings (admin)** — app-registration config (secret write-only, Fernet-encrypted), a guided
   setup wizard, connection tests, collectors, demo data, and historical audit backfill.
-- **Setup guide** — permissions, CSV export paths and troubleshooting, available at any time.
+- **Setup guide** — permissions, CSV export paths and troubleshooting, reachable from
+  **Settings → Setup guide** at any time.
 
 Consumption and Usage are deliberately **never blended** into one measure. They join on user, not
 on resource group — dollars and task counts answer different questions.

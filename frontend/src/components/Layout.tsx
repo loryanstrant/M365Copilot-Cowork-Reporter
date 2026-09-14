@@ -20,10 +20,7 @@ const ADMIN_NAV = [
   { to: "/settings", label: "Settings" },
 ];
 
-const HELP_NAV = [
-  { to: "/help", label: "Setup guide" },
-  { to: "/about", label: "About" },
-];
+const HELP_NAV = [{ to: "/about", label: "About" }];
 
 function navClass({ isActive }: { isActive: boolean }): string {
   return [
