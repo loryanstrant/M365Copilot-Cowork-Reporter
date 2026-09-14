@@ -6,6 +6,12 @@ import react from "@vitejs/plugin-react";
 // ever talks to a single origin (no CORS needed).
 const target = process.env.VITE_PROXY_TARGET || "http://localhost:8000";
 
+// The container always serves Vite on 5173, but the host port can be remapped
+// (WEB_PORT) to avoid clashes with the other solutions in the suite. When it
+// differs, tell the HMR client which browser-visible port to connect its
+// websocket to, otherwise live-reload silently fails on the custom port.
+const hostPort = Number(process.env.WEB_PORT) || 5174;
+
 export default defineConfig({
   plugins: [react()],
   server: {
@@ -15,6 +21,9 @@ export default defineConfig({
     watch: {
       usePolling: true,
       interval: 300,
+    },
+    hmr: {
+      clientPort: hostPort,
     },
     proxy: {
       "/auth": target,
