@@ -4,6 +4,7 @@ import { useAuth } from "./auth/AuthContext";
 import { useSetupStatus } from "./hooks/useSetupStatus";
 import LoginPage from "./pages/LoginPage";
 import OverviewPage from "./pages/OverviewPage";
+import PersonalPage from "./pages/PersonalPage";
 import ConsumptionPage from "./pages/ConsumptionPage";
 import UsagePage from "./pages/UsagePage";
 import UsersPage from "./pages/UsersPage";
@@ -37,16 +38,31 @@ export default function App() {
   // see the usual empty states.
   const needsSetup = checked && !configured && user.role === "admin";
 
+  // Anyone signed in with a work account lands on their own data. The password
+  // admin has no Entra identity, so there is no "me" to show them — they go
+  // straight to the organisation view.
+  const landing = needsSetup ? (
+    <Navigate to="/settings" replace />
+  ) : user.has_personal_view ? (
+    <PersonalPage />
+  ) : (
+    <OverviewPage />
+  );
+
+  // Organisation pages are gated. The API enforces this too — this only keeps
+  // someone from landing on a page that would just error.
+  const org = (el: JSX.Element) =>
+    user.can_view_org ? el : <Navigate to="/" replace />;
+
   return (
     <Layout>
       <Routes>
-        <Route
-          path="/"
-          element={needsSetup ? <Navigate to="/settings" replace /> : <OverviewPage />}
-        />
-        <Route path="/consumption" element={<ConsumptionPage />} />
-        <Route path="/usage" element={<UsagePage />} />
-        <Route path="/users" element={<UsersPage />} />
+        <Route path="/" element={landing} />
+        <Route path="/me" element={<PersonalPage />} />
+        <Route path="/overview" element={org(<OverviewPage />)} />
+        <Route path="/consumption" element={org(<ConsumptionPage />)} />
+        <Route path="/usage" element={org(<UsagePage />)} />
+        <Route path="/users" element={org(<UsersPage />)} />
         <Route path="/help" element={<HelpPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/settings" element={adminOnly(<SettingsPage />)} />

@@ -22,6 +22,12 @@ class TokenOut(BaseModel):
 class UserOut(BaseModel):
     username: str
     role: str
+    # Whether this user may see organisation-wide data. Drives whether the SPA
+    # offers the org view or shows it locked.
+    can_view_org: bool = True
+    # Whether there is an Entra identity to filter a personal view down to.
+    # False for the password admin, who therefore lands on the org view.
+    has_personal_view: bool = False
 
 
 class AuthConfigOut(BaseModel):
@@ -39,6 +45,7 @@ class AppConfigIn(BaseModel):
     cost_rolling_window_days: int | None = None
     audit_backfill_days: int | None = None
     report_access_group_id: str | None = None
+    org_view_group_id: str | None = None
     schedule_interval_hours: int | None = None
 
 
@@ -50,6 +57,7 @@ class AppConfigOut(BaseModel):
     cost_rolling_window_days: int = 10
     audit_backfill_days: int = 30
     report_access_group_id: str | None = None
+    org_view_group_id: str | None = None
     schedule_interval_hours: int = 8
     configured: bool = False
     updated_at: datetime | None = None
@@ -169,3 +177,52 @@ class UsageTrendOut(BaseModel):
     period_days: int
     active_users: int
     total_tasks: int
+
+
+# --- personal view ------------------------------------------------------
+# Everything below describes one person's own activity. The person is always
+# taken from the caller's token, never from a request parameter.
+class MySummaryOut(BaseModel):
+    user_principal_name: str | None
+    display_name: str | None
+    report_period: int | None = None
+    total_tasks: int = 0
+    scheduled_tasks: int = 0
+    user_initiated_tasks: int = 0
+    active_days: int = 0
+    last_activity_date: datetime | None = None
+    cowork_events: int = 0
+    credits_consumed: float = 0.0
+    has_data: bool = False
+
+
+class MyEventOut(BaseModel):
+    event_id: str
+    created_at: datetime | None
+    operation: str | None
+    app_host: str | None
+    agent_name: str | None
+    thread_id: str | None
+    tools: int = 0
+    accessed_resources: int = 0
+
+
+class MyUsageTrendOut(BaseModel):
+    period_days: int
+    total_tasks: int
+    scheduled_tasks: int
+    user_initiated_tasks: int
+    active_days: int
+
+
+class MyComparisonOut(BaseModel):
+    """This person's tasks against the organisation median.
+
+    Only the aggregate is returned — never another individual's figures — so it
+    stays safe to show to someone without organisation-wide access.
+    """
+
+    my_tasks: int
+    org_median_tasks: int
+    people_counted: int
+    above_median: bool

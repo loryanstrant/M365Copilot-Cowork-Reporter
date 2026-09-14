@@ -101,6 +101,29 @@ The sign-in page then shows a **"Sign in with Microsoft"** button.
 > proxy doesn't pass the standard forwarded headers, set `PUBLIC_BASE_URL` (for example
 > `https://reports.contoso.com`) so the redirect URI is correct.
 
+### Your activity vs. the organisation view
+
+Anyone who signs in with a work account lands on **Your activity** — their own Cowork tasks,
+sessions and credits, and nobody else's. The person is taken from the signed-in token, so there is
+no way to ask the API for somebody else's figures.
+
+Stepping across to the organisation-wide pages is controlled by **Organisation view group ID** in
+Settings:
+
+- **Left blank (the default): the organisation view is open to everyone who can sign in.** That is
+  how the app behaved before this feature existed, so upgrading an existing deployment locks nobody
+  out.
+- **Set to an Entra security group:** only members of that group see organisation-wide reporting.
+  Everyone else keeps their personal view, and is shown the organisation switch locked with a note
+  to ask their administrator — rather than having it silently disappear.
+- **Administrators always have access**, including the password admin. That account has no Entra
+  identity, so there is no "me" to show it: it lands on the organisation view as before.
+
+This is a **separate** group from the "Restrict viewers to this security group" setting above it.
+That one decides who may open the report at all; reusing it would have handed a personal view to
+people you had deliberately excluded. Membership is re-checked on each request, so removing someone
+from the group takes effect in minutes rather than whenever their token next expires.
+
 ### Where to find run history, logs, and errors
 
 - **In the app:** **Settings** shows the last run and row counts per source; **About** shows data
@@ -113,6 +136,8 @@ The sign-in page then shows a **"Sign in with Microsoft"** button.
 
 ## What it does
 
+- **Your activity** — your own Cowork tasks, sessions and credits, plus how you compare to the
+  organisation median. Shown to anyone signed in with a work account.
 - **Overview** — headline KPIs across consumption and usage with trend since GA.
 - **Consumption** — Azure spend by resource group plus Copilot credit consumption.
 - **Usage** — Cowork tasks, active days and adoption per user.

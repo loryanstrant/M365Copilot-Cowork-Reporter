@@ -47,6 +47,7 @@ export default function SettingsPage() {
         audit_backfill_days: cfg!.audit_backfill_days,
         schedule_interval_hours: cfg!.schedule_interval_hours,
         report_access_group_id: cfg!.report_access_group_id,
+        org_view_group_id: cfg!.org_view_group_id,
       };
       if (secret) body.client_secret = secret;
       const updated = await api<AppConfig>("/admin/config", {
@@ -194,6 +195,23 @@ export default function SettingsPage() {
               }
               placeholder="Leave blank to allow anyone in your tenant"
             />
+          </div>
+          <div>
+            <label className={label}>
+              Organisation view group ID (optional, group object ID)
+            </label>
+            <input
+              className={field}
+              value={cfg.org_view_group_id || ""}
+              onChange={(e) => setCfg({ ...cfg, org_view_group_id: e.target.value })}
+              placeholder="Leave blank to let any signed-in user see organisation data"
+            />
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              Members of this group may see organisation-wide reporting. Everyone else
+              sees only their own activity. Separate from the group above, which
+              decides who may open the report at all. Administrators always have
+              access.
+            </p>
           </div>
         </div>
       </Card>

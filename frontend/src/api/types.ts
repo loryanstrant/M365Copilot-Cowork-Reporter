@@ -3,6 +3,44 @@
 export interface User {
   username: string;
   role: string;
+  /** May see organisation-wide data (admin, or in the org-view group). */
+  can_view_org: boolean;
+  /** Has an Entra identity to filter a personal view to. False for the
+   *  password admin, who therefore lands on the organisation view. */
+  has_personal_view: boolean;
+}
+
+/** One person's own Cowork activity — always the signed-in caller's. */
+export interface MySummary {
+  user_principal_name: string | null;
+  display_name: string | null;
+  report_period: number | null;
+  total_tasks: number;
+  scheduled_tasks: number;
+  user_initiated_tasks: number;
+  active_days: number;
+  last_activity_date: string | null;
+  cowork_events: number;
+  credits_consumed: number;
+  has_data: boolean;
+}
+
+export interface MyEvent {
+  event_id: string;
+  created_at: string | null;
+  operation: string | null;
+  app_host: string | null;
+  agent_name: string | null;
+  thread_id: string | null;
+  tools: number;
+  accessed_resources: number;
+}
+
+export interface MyComparison {
+  my_tasks: number;
+  org_median_tasks: number;
+  people_counted: number;
+  above_median: boolean;
 }
 
 export interface Kpis {
@@ -70,6 +108,8 @@ export interface AppConfig {
   cost_rolling_window_days: number;
   audit_backfill_days: number;
   report_access_group_id: string | null;
+  /** Members may see organisation-wide data. Null = open to all signed-in users. */
+  org_view_group_id: string | null;
   schedule_interval_hours: number;
   configured: boolean;
   updated_at: string | null;
