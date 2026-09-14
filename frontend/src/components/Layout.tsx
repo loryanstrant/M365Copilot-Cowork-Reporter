@@ -15,6 +15,15 @@ const NAV = [
   { to: "/about", label: "About", admin: false },
 ];
 
+function navClass({ isActive }: { isActive: boolean }): string {
+  return [
+    "block rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+    isActive
+      ? "bg-brand-600 text-white"
+      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white",
+  ].join(" ");
+}
+
 export default function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const { theme, toggle } = useTheme();
@@ -22,60 +31,51 @@ export default function Layout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex h-full">
-      <aside className="flex w-60 flex-col border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex items-center gap-2.5 px-5 py-5">
-          <img src="/copilot-cowork.png" alt="Copilot Cowork" className="h-8 w-8" />
+      <aside className="flex w-60 shrink-0 flex-col border-r border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
+        <div className="flex items-center gap-3 px-5 py-5">
+          <img src="/app-logo.png" alt="Copilot Cowork" className="h-8 w-8 shrink-0" />
           <div>
-            <div className="text-sm font-semibold text-brand-700 dark:text-brand-400">
-              Copilot Cowork
+            <div className="text-sm font-semibold text-brand-600 dark:text-brand-500">
+              M365 Copilot
             </div>
-            <div className="text-xs text-slate-500 dark:text-slate-400">
-              Consumption &amp; Usage
+            <div className="text-lg font-bold leading-tight text-slate-900 dark:text-white">
+              Cowork Reporter
             </div>
           </div>
         </div>
         <nav className="flex-1 space-y-1 px-3">
           {items.map((n) => (
-            <NavLink
-              key={n.to}
-              to={n.to}
-              end={n.end}
-              className={({ isActive }) =>
-                `block rounded-md px-3 py-2 text-sm ${
-                  isActive
-                    ? "bg-brand-50 font-medium text-brand-700 dark:bg-brand-500/10 dark:text-brand-400"
-                    : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
-                }`
-              }
-            >
+            <NavLink key={n.to} to={n.to} end={n.end} className={navClass}>
               {n.label}
             </NavLink>
           ))}
         </nav>
-        <div className="border-t border-slate-200 px-5 py-4 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+        <div className="space-y-3 border-t border-slate-200 px-4 py-4 text-sm dark:border-slate-700">
           <button
             onClick={toggle}
-            className="mb-3 flex w-full items-center justify-between rounded-md border border-slate-200 px-3 py-2 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+            className="flex w-full items-center justify-between rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
           >
-            <span>{theme === "dark" ? "Dark mode" : "Light mode"}</span>
+            <span>{theme === "dark" ? "Dark" : "Light"} mode</span>
             <span aria-hidden>{theme === "dark" ? "🌙" : "☀️"}</span>
           </button>
-          <div className="mb-1 truncate text-slate-600 dark:text-slate-300">
-            {user?.username}
+          <div>
+            <div className="font-medium text-slate-800 dark:text-slate-100">
+              {user?.username}
+            </div>
+            <div className="mb-3 text-xs uppercase tracking-wide text-slate-400">
+              {user?.role}
+            </div>
+            <button
+              onClick={logout}
+              className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+            >
+              Sign out
+            </button>
           </div>
-          <div className="mb-2 uppercase tracking-wide text-slate-400 dark:text-slate-500">
-            {user?.role}
-          </div>
-          <button
-            onClick={logout}
-            className="text-brand-600 hover:underline dark:text-brand-400"
-          >
-            Sign out
-          </button>
         </div>
       </aside>
-      <main className="flex-1 overflow-auto">
-        <div className="mx-auto max-w-6xl px-8 py-8">{children}</div>
+      <main className="min-w-0 flex-1 overflow-auto">
+        <div className="mx-auto w-full max-w-[1600px] px-8 py-8">{children}</div>
       </main>
     </div>
   );

@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { AppConfig, TestConnection } from "../api/types";
 import { Card } from "../components/Card";
+import DemoDataCard from "../components/DemoDataCard";
+import SetupWizard from "../components/SetupWizard";
 
 export default function SettingsPage() {
   const [cfg, setCfg] = useState<AppConfig | null>(null);
@@ -21,7 +23,7 @@ export default function SettingsPage() {
     })();
   }, []);
 
-  if (!cfg) return <div className="text-slate-500">Loading…</div>;
+  if (!cfg) return <div className="text-slate-500 dark:text-slate-400">Loading…</div>;
 
   async function save() {
     setBusy(true);
@@ -72,14 +74,6 @@ export default function SettingsPage() {
     setMsg(r.detail);
   }
 
-  async function seedDemo() {
-    setMsg(null);
-    const r = await api<{ status: string; detail: string }>("/admin/seed-demo", {
-      method: "POST",
-    });
-    setMsg(r.detail);
-  }
-
   async function runBackfill() {
     setMsg(null);
     const days = backfillDays.trim() ? Number(backfillDays) : undefined;
@@ -97,13 +91,16 @@ export default function SettingsPage() {
     poll();
   }
 
-  const field = "w-full rounded-md border border-slate-300 px-3 py-2 text-sm";
-  const label = "mb-1 block text-sm text-slate-600";
+  const field = "input";
+  const label = "mb-1 block text-sm text-slate-600 dark:text-slate-300";
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-slate-800">Settings</h1>
-      <div className="rounded-md bg-brand-50 px-3 py-2 text-sm text-brand-700">
+      <h1 className="text-2xl font-bold">Settings</h1>
+
+      <SetupWizard defaultOpen={!cfg.configured} />
+
+      <div className="rounded-md bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:text-brand-300 dark:bg-brand-500/15">
         New here? See the{" "}
         <a href="/help" className="font-medium underline">
           Setup guide
@@ -113,7 +110,7 @@ export default function SettingsPage() {
       </div>
 
       <Card title="App registration (Graph + Azure)">
-        <p className="mb-4 text-xs text-slate-500">
+        <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
           One app registration drives all automated collectors. Required app roles:{" "}
           <code>AuditLogsQuery.Read.All</code>, <code>User.Read.All</code>, and{" "}
           <em>Cost Management Reader</em> on each Azure subscription below.
@@ -198,35 +195,20 @@ export default function SettingsPage() {
       </Card>
 
       <div className="flex flex-wrap gap-3">
-        <button
-          onClick={save}
-          disabled={busy}
-          className="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
-        >
+        <button onClick={save} disabled={busy} className="btn-primary">
           Save
         </button>
-        <button
-          onClick={runTest}
-          disabled={busy}
-          className="rounded-md border border-slate-300 px-4 py-2 text-sm hover:bg-slate-100"
-        >
+        <button onClick={runTest} disabled={busy} className="btn-secondary">
           Test connection
         </button>
-        <button
-          onClick={runIngest}
-          className="rounded-md border border-slate-300 px-4 py-2 text-sm hover:bg-slate-100"
-        >
-          Run collectors now
-        </button>
-        <button
-          onClick={seedDemo}
-          className="rounded-md border border-slate-300 px-4 py-2 text-sm hover:bg-slate-100"
-        >
-          Seed demo data
+        <button onClick={runIngest} className="btn-secondary">
+          Run now
         </button>
       </div>
 
-      {msg && <div className="text-sm text-slate-600">{msg}</div>}
+      {msg && <div className="text-sm text-slate-600 dark:text-slate-300">{msg}</div>}
+
+      <DemoDataCard />
 
       {test && (
         <Card title="Connection test">
@@ -238,7 +220,7 @@ export default function SettingsPage() {
             <Check ok={test.cost_read} label="Cost Management read" />
           </ul>
           {test.detail && (
-            <div className="mt-3 rounded bg-slate-50 px-3 py-2 text-xs text-slate-600">
+            <div className="mt-3 rounded bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:text-slate-300 dark:bg-slate-800/60">
               {test.detail}
             </div>
           )}
@@ -246,19 +228,19 @@ export default function SettingsPage() {
       )}
 
       <Card title="Historical audit backfill">
-        <p className="mb-3 text-xs text-slate-500">
+        <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">
           Deep-loads Cowork events from the Purview audit log, chunked into monthly
           windows. Reaches back to Cowork GA (June 2026) by default, or set a shorter
           look-back below. Safe to re-run — events upsert on their ID.
         </p>
         <div className="flex flex-wrap items-end gap-3">
           <div>
-            <label className="mb-1 block text-sm text-slate-600">
+            <label className="mb-1 block text-sm text-slate-600 dark:text-slate-300">
               Look-back (days, blank = since GA)
             </label>
             <input
               type="number"
-              className="w-56 rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="w-56 rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-600"
               value={backfillDays}
               onChange={(e) => setBackfillDays(e.target.value)}
               placeholder="e.g. 120"
@@ -266,14 +248,14 @@ export default function SettingsPage() {
           </div>
           <button
             onClick={runBackfill}
-            className="rounded-md border border-slate-300 px-4 py-2 text-sm hover:bg-slate-100"
+            className="rounded-md border border-slate-300 px-4 py-2 text-sm hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-700"
           >
             Run backfill
           </button>
         </div>
         {progress && (
           <div className="mt-4">
-            <div className="mb-1 flex justify-between text-xs text-slate-500">
+            <div className="mb-1 flex justify-between text-xs text-slate-500 dark:text-slate-400">
               <span>
                 {progress.running ? "Running" : "Done"} —{" "}
                 {String(progress.current_window ?? "")}

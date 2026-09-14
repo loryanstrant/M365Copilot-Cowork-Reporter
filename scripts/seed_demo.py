@@ -134,3 +134,19 @@ async def seed(reset: bool = True) -> dict[str, int]:
 
 if __name__ == "__main__":
     print(asyncio.run(seed()))
+
+
+async def clear() -> dict[str, int]:
+    """Remove all seeded data, leaving credentials and app accounts intact.
+
+    Mirrors the reset list in ``seed`` — fact tables and the chargeback mapping
+    only; ``app_config`` and ``app_users`` are never touched.
+    """
+    async with SessionLocal() as s:
+        for model in (
+            DailyCost, CreditConsumption, CoworkUsage, CoworkEvent,
+            DirectoryUser, BillingPolicy,
+        ):
+            await s.execute(delete(model))
+        await s.commit()
+    return {"cleared": 1}

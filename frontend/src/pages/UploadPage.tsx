@@ -7,12 +7,12 @@ export default function UploadPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-slate-800">Upload admin CSVs</h1>
-        <p className="text-sm text-slate-500">
+        <h1 className="text-2xl font-bold">Upload admin CSVs</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400">
           Microsoft ships no API for Cowork task metrics or Copilot Credit consumption.
           Export them from the M365 admin centre and upload here — re-uploading a fresher
           export just updates the rows. Step-by-step export instructions are on the{" "}
-          <a href="/help" className="font-medium text-brand-600 underline">
+          <a href="/help" className="font-medium text-brand-600 underline dark:text-brand-400">
             Setup guide
           </a>
           .
@@ -92,10 +92,10 @@ function UploadCard({
 
   return (
     <Card title={title}>
-      <p className="mb-4 text-xs text-slate-500">{description}</p>
+      <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">{description}</p>
       <div className="grid gap-4 md:grid-cols-2">
         <div>
-          <label className="mb-1 block text-sm text-slate-600">CSV file</label>
+          <label className="mb-1 block text-sm text-slate-600 dark:text-slate-300">CSV file</label>
           <input
             type="file"
             accept=".csv"
@@ -105,7 +105,7 @@ function UploadCard({
         </div>
         {extraFields.map((f) => (
           <div key={f.name}>
-            <label className="mb-1 block text-sm text-slate-600">{f.label}</label>
+            <label className="mb-1 block text-sm text-slate-600 dark:text-slate-300">{f.label}</label>
             {f.type === "select" ? (
               <select
                 className={field}

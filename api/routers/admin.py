@@ -179,7 +179,11 @@ async def backfill_cancel() -> IngestRunOut:
 
 @router.post("/seed-demo", response_model=IngestRunOut)
 async def seed_demo(reset: bool = True) -> IngestRunOut:
-    """Seed synthetic Cowork data so the dashboards render without live sources."""
+    """Seed synthetic Cowork data so the dashboards render without live sources.
+
+    Explicit action only — nothing is ever seeded automatically on deploy.
+    Credentials and app user accounts are never touched.
+    """
     from scripts.seed_demo import seed
 
     stats = await seed(reset)
@@ -189,6 +193,22 @@ async def seed_demo(reset: bool = True) -> IngestRunOut:
             f"Seeded {stats['cost_rows']} cost rows, {stats['events']} events, "
             f"{stats['usage_rows']} usage rows, {stats['credit_rows']} credit rows."
         ),
+    )
+
+
+@router.post("/clear-demo", response_model=IngestRunOut)
+async def clear_demo() -> IngestRunOut:
+    """Remove all seeded data, leaving credentials and accounts intact.
+
+    Run this before your first production run so demo numbers can't be mistaken
+    for real ones.
+    """
+    from scripts.seed_demo import clear
+
+    await clear()
+    return IngestRunOut(
+        status="cleared",
+        detail="Demo data removed. Run now to load live data from your tenant.",
     )
 
 

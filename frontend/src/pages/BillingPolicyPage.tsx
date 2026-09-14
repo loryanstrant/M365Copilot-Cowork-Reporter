@@ -49,8 +49,8 @@ export default function BillingPolicyPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-slate-800">Chargeback mapping</h1>
-        <p className="text-sm text-slate-500">
+        <h1 className="text-2xl font-bold">Chargeback mapping</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400">
           Map each Azure resource group (= billing policy) to a cost centre and owner.
           This is the chargeback layer Microsoft's tooling doesn't provide — it turns the
           cost view into a per-business-unit view.
@@ -60,7 +60,7 @@ export default function BillingPolicyPage() {
       <Card title={draft.resource_group ? `Edit: ${draft.resource_group}` : "Add mapping"}>
         <div className="grid gap-4 md:grid-cols-3">
           <div>
-            <label className="mb-1 block text-sm text-slate-600">Resource group</label>
+            <label className="mb-1 block text-sm text-slate-600 dark:text-slate-300">Resource group</label>
             <input
               className={field}
               value={draft.resource_group}
@@ -69,7 +69,7 @@ export default function BillingPolicyPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm text-slate-600">Billing policy name</label>
+            <label className="mb-1 block text-sm text-slate-600 dark:text-slate-300">Billing policy name</label>
             <input
               className={field}
               value={draft.billing_policy_name || ""}
@@ -77,7 +77,7 @@ export default function BillingPolicyPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm text-slate-600">Cost centre</label>
+            <label className="mb-1 block text-sm text-slate-600 dark:text-slate-300">Cost centre</label>
             <input
               className={field}
               value={draft.cost_centre || ""}
@@ -85,7 +85,7 @@ export default function BillingPolicyPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm text-slate-600">Business owner</label>
+            <label className="mb-1 block text-sm text-slate-600 dark:text-slate-300">Business owner</label>
             <input
               className={field}
               value={draft.business_owner || ""}
@@ -93,7 +93,7 @@ export default function BillingPolicyPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm text-slate-600">Project</label>
+            <label className="mb-1 block text-sm text-slate-600 dark:text-slate-300">Project</label>
             <input
               className={field}
               value={draft.project || ""}
@@ -101,7 +101,7 @@ export default function BillingPolicyPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm text-slate-600">Notes</label>
+            <label className="mb-1 block text-sm text-slate-600 dark:text-slate-300">Notes</label>
             <input
               className={field}
               value={draft.notes || ""}
@@ -121,13 +121,13 @@ export default function BillingPolicyPage() {
           {draft.resource_group && (
             <button
               onClick={() => setDraft(EMPTY)}
-              className="rounded-md border border-slate-300 px-4 py-2 text-sm hover:bg-slate-100"
+              className="rounded-md border border-slate-300 px-4 py-2 text-sm hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-700"
             >
               Clear
             </button>
           )}
         </div>
-        {msg && <div className="mt-2 text-sm text-slate-500">{msg}</div>}
+        {msg && <div className="mt-2 text-sm text-slate-500 dark:text-slate-400">{msg}</div>}
       </Card>
 
       <Card title="Mappings">
@@ -136,7 +136,7 @@ export default function BillingPolicyPage() {
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-200 text-left text-slate-500">
+              <tr className="border-b border-slate-200 text-left text-slate-500 dark:text-slate-400 dark:border-slate-700">
                 <th className="py-2">Resource group</th>
                 <th>Policy</th>
                 <th>Cost centre</th>
@@ -147,7 +147,7 @@ export default function BillingPolicyPage() {
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.resource_group} className="border-b border-slate-100">
+                <tr key={r.resource_group} className="border-b border-slate-100 dark:border-slate-800">
                   <td className="py-2 font-mono text-xs">{r.resource_group}</td>
                   <td>{r.billing_policy_name || "—"}</td>
                   <td>{r.cost_centre || "—"}</td>
@@ -156,7 +156,7 @@ export default function BillingPolicyPage() {
                   <td className="text-right">
                     <button
                       onClick={() => edit(r)}
-                      className="mr-3 text-brand-600 hover:underline"
+                      className="mr-3 text-brand-600 hover:underline dark:text-brand-400"
                     >
                       Edit
                     </button>

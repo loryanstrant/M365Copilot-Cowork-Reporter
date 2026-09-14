@@ -1,10 +1,10 @@
 # M365 Copilot Cowork Reporter
 
-Self-contained, containerised reporting for **Microsoft 365 Copilot Cowork** —
-showing both **consumption** (Azure cost + Copilot credits) and **usage**
-(tasks, adoption, and Purview audit events). No FinOps toolkit, no Fabric, no
-Power BI — just a small FastAPI + worker + Postgres + React app you can run with
-`docker compose up` or deploy to Azure with one click.
+Self-hosted consumption and usage reporting for **Microsoft 365 Copilot Cowork**. Cowork has no
+single reporting API, so this is a **collector**: it joins Azure cost, Copilot credits, task
+adoption and Purview audit into one durable store and serves a web dashboard. No Fabric, no
+Power BI, no FinOps toolkit — and no data leaves your subscription. Runs anywhere with
+`docker compose up`, or deploys to Azure Container Apps in one click.
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Floryanstrant%2FM365Copilot-Cowork-Reporter%2Fmain%2Finfra%2Fazuredeploy.json/createUIDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2Floryanstrant%2FM365Copilot-Cowork-Reporter%2Fmain%2Finfra%2FcreateUiDefinition.json)
 
@@ -12,170 +12,247 @@ Power BI — just a small FastAPI + worker + Postgres + React app you can run wi
 
 ## Screenshots
 
-| Overview | Consumption |
-|---|---|
-| ![Overview](docs/screenshots/overview.png) | ![Consumption](docs/screenshots/consumption.png) |
+### Overview
 
-| Usage (sortable/filterable) | Tenant users |
-|---|---|
-| ![Usage](docs/screenshots/usage.png) | ![Tenant users](docs/screenshots/tenant-users.png) |
+Headline KPIs across consumption and usage, with the trend since Cowork went live.
 
-| Settings (dark mode) | Sign in |
-|---|---|
-| ![Settings](docs/screenshots/settings.png) | ![Sign in](docs/screenshots/login.png) |
+![Overview](docs/screenshots/overview.png)
 
-## Why this exists
+### Consumption
 
-Copilot Cowork has **no single reporting API**. The data you need is scattered
-across sources with different access models. This app is a **collector** that
-joins them into one durable store and presents Consumption and Usage as separate
-views (joined on user, never blended — dollars vs task counts).
+Azure spend by resource group and Copilot credit consumption, with chargeback mapping.
 
-| Signal | Source | Mode |
-|---|---|---|
-| Azure spend by resource group | Cost Management Query API | **Automated** (app-only) |
-| Cowork events / resources touched | Purview audit (`CopilotInteraction`) | **Automated** (app-only) |
-| Org context (dept, cost centre) | Microsoft Graph `/users` | **Automated** (app-only) |
-| Cowork tasks / adoption | Admin centre Cowork usage report | **CSV upload** |
-| Copilot credit consumption | Admin centre Cost Management | **CSV upload** |
+![Consumption](docs/screenshots/consumption.png)
 
-The two CSV sources have **no Microsoft API** (validated against a live tenant).
-They are uploaded from the admin centre's Export button. If Microsoft ships an
-API later, the collector gains a loader and nothing downstream changes.
+### Usage
 
-### Cowork identification in Purview audit
+Cowork tasks and adoption per user, sortable and filterable.
 
-A `CopilotInteraction` audit record is treated as Cowork when
-`CopilotEventData.AppHost == "cowork"` **or**
-`AppIdentity == "Copilot.M365Copilot.CoworkChat"` (both co-occur, alongside
-`AgentName == "Copilot Cowork"`). Audit answers *who / when / what-touched* —
-never task volume (use the usage CSV) or cost (use the cost/credits sources).
-Prompt text is never stored.
+![Usage](docs/screenshots/usage.png)
 
-## Architecture
+### Tenant users
 
-```
-Azure Cost Mgmt API ─┐
-Purview audit  ───────┼─► worker (APScheduler) ─► Postgres ─► FastAPI ─► React SPA
-Graph /users   ───────┘                              ▲
-Admin CSV exports ───────── API upload endpoints ────┘
-```
+Directory context — department, office and cost centre — joined to activity.
 
-- **api/** — FastAPI: auth (password gate + optional Entra SSO), admin config,
-  CSV upload, metrics/reporting.
-- **worker/** — scheduled collectors (cost / audit / users), a deep audit
-  backfill, and CSV importers.
-- **shared/** — SQLAlchemy star schema, config, crypto, migrations.
-- **frontend/** — React + Vite + Tailwind: Overview, Consumption, Usage,
-  Upload, Chargeback, Settings, Setup guide.
-- **infra/** — Bicep (azd) + compiled ARM + createUiDefinition (Deploy button).
+![Tenant users](docs/screenshots/tenant-users.png)
 
-### Star schema
+### Settings
 
-- Consumption: `fact_daily_cost`, `fact_credit_consumption`
-- Usage: `fact_cowork_usage`, `fact_cowork_event`
-- Dimensions: `dim_user`, `dim_billing_policy` (UI-editable chargeback mapping)
+Configuration, connection tests, collectors and the guided first-run wizard.
 
-## Run locally
+![Settings](docs/screenshots/settings.png)
+
+### Sign in
+
+![Sign in](docs/screenshots/login.png)
+
+## Deploy to Azure (one click)
+
+The button provisions everything into a resource group of your choice: a PostgreSQL flexible
+server, a Container Apps environment, and the **api** + **worker** container apps (pulled as
+prebuilt public images from GitHub Container Registry). You only enter an **admin password** — the
+database password and encryption keys are generated for you. When the deployment finishes, open the
+`dashboardUrl` output, sign in, and complete the in-app **Settings** to connect your tenant.
+
+## After it's deployed
+
+**1. Open the dashboard.** In the portal, go to your resource group → open the deployment →
+**Outputs** → copy **`dashboardUrl`**. That is your app, served by the **`…-api-…`** Container App
+(the `…-worker-…` one has no web UI — it just runs collectors in the background).
+
+**2. Sign in.** Username is what you set as **admin username** (default `admin`); password is the
+**admin password** you chose at deploy time.
+
+**3. Connect your tenant.** Go to **Settings**. The first-run wizard walks you through creating an
+Entra app registration with the required permissions, granting **Cost Management Reader** on your
+subscriptions, and creating a client secret. Paste **Tenant ID**, **Client ID** and **Client
+secret**, then **Test connection**.
+
+**4. Load data.** Select **Run now** to pull audit, directory and cost. Then upload the two
+admin-centre CSVs (see below) that have no API. **Settings → Historical audit backfill** deep-loads
+Cowork events back to GA.
+
+Want to look around before connecting a tenant? **Settings → Demo data → Load demo data** fills the
+dashboards with plausible fictional data. Clear it again from the same card before your first live
+run. Nothing is ever seeded or wiped automatically.
+
+### Enabling Entra ID single sign-on (optional)
+
+By default the dashboard is protected by the single admin password. You can additionally let
+colleagues sign in with their **work account** (read-only viewer role) via **Container Apps Easy
+Auth** — administration stays behind the password.
+
+Open the **`…-api-…`** Container App → **Settings → Authentication** → **Add identity provider** →
+**Microsoft**, use an app registration's client ID and secret, and set *unauthenticated requests* to
+**Allow**. Add the redirect URI `https://<your-dashboardUrl>/.auth/login/aad/callback` under
+**Authentication → Web** on that app registration. Once enabled, the sign-in page shows a
+**"Sign in with Microsoft"** button.
+
+### Where to find run history, logs, and errors
+
+- **In the app:** **Settings** shows the last run and row counts per source; **About** shows data
+  freshness across audit, usage and cost.
+- **Container logs:** a manual **Run now** and the backfill execute inside the **`…-api-…`**
+  Container App — open it → **Monitoring → Log stream**. Scheduled collection runs in the
+  **`…-worker-…`** Container App.
+- **A run that returns no audit events** usually means the legacy `AuditLog.Read.All` permission was
+  granted instead of `AuditLogsQuery.Read.All` — see below.
+
+## What it does
+
+- **Overview** — headline KPIs across consumption and usage with trend since GA.
+- **Consumption** — Azure spend by resource group plus Copilot credit consumption.
+- **Usage** — Cowork tasks, active days and adoption per user.
+- **Tenant users** — directory context joined to activity.
+- **Chargeback (admin)** — map each resource group to a cost centre or business unit.
+- **Upload CSV (admin)** — load the two admin-centre exports that have no API.
+- **Settings (admin)** — app-registration config (secret write-only, Fernet-encrypted), a guided
+  setup wizard, connection tests, collectors, demo data, and historical audit backfill.
+- **Setup guide** — permissions, CSV export paths and troubleshooting, available at any time.
+
+Consumption and Usage are deliberately **never blended** into one measure. They join on user, not
+on resource group — dollars and task counts answer different questions.
+
+### How Cowork is identified in Purview audit
+
+A `CopilotInteraction` audit record counts as Cowork when
+`CopilotEventData.AppHost == "cowork"` **or** `AppIdentity == "Copilot.M365Copilot.CoworkChat"`
+(both co-occur, alongside `AgentName == "Copilot Cowork"`). Audit answers *who / when /
+what-touched* — never task volume (use the usage CSV) or cost (use the cost and credits sources).
+**Prompt text is never stored.**
+
+## Prerequisites & permissions
+
+- A **Global Administrator** (or Privileged Role Administrator plus Application Administrator) to
+  create the app registration and grant admin consent.
+- **Owner** or **User Access Administrator** on each Azure subscription you want cost for.
+- Access to the Microsoft 365 admin centre to export the two Cowork CSVs.
+- PowerShell 7 with the Microsoft Graph and Az SDKs, if you'd rather script the registration.
+
+The app registration needs these **application** permissions (not delegated), both admin-consented:
+
+| Permission | Why |
+| --- | --- |
+| `AuditLogsQuery.Read.All` | Reads Purview audit for Cowork interactions — who used Cowork, when, and what it touched. |
+| `User.Read.All` | Resolves users, departments and cost centres so usage and spend can be grouped. |
+
+> ⚠️ Microsoft began enforcing `AuditLogsQuery.Read.All` in April 2026. The legacy
+> `AuditLog.Read.All` silently returns **zero** Copilot records — grant the *Query* permission.
+
+Plus this Azure RBAC role, assigned to the same app registration on **each subscription in scope**:
+
+| Role | Why |
+| --- | --- |
+| `Cost Management Reader` | Lets the collector pull daily Azure spend by resource group via the Cost Management Query API. |
+
+The in-app **Setup guide** page and the Settings wizard both carry a one-shot PowerShell script that
+does all of the above and prints the three values you need:
 
 ```powershell
+# Run in PowerShell 7 with the Microsoft Graph and Az SDKs.
+# Requires a Global Administrator (or Privileged Role + Application admin),
+# and Owner/User Access Administrator on the subscriptions you want cost for.
+Install-Module Microsoft.Graph -Scope CurrentUser -Force  # first time only
+Install-Module Az -Scope CurrentUser -Force               # first time only
+Connect-MgGraph -Scopes "Application.ReadWrite.All","AppRoleAssignment.ReadWrite.All"
+
+$graphSp = Get-MgServicePrincipal -Filter "appId eq '00000003-0000-0000-c000-000000000000'"
+$needed  = "AuditLogsQuery.Read.All","User.Read.All"
+$roles   = $graphSp.AppRoles | Where-Object { $needed -contains $_.Value }
+
+$app = New-MgApplication -DisplayName "M365 Copilot Cowork Reporter" -RequiredResourceAccess @{
+  ResourceAppId  = "00000003-0000-0000-c000-000000000000"
+  ResourceAccess = @($roles | ForEach-Object { @{ Id = $_.Id; Type = "Role" } })
+}
+$sp = New-MgServicePrincipal -AppId $app.AppId
+
+# Grant admin consent for both application permissions
+foreach ($r in $roles) {
+  New-MgServicePrincipalAppRoleAssignment -ServicePrincipalId $sp.Id `
+    -PrincipalId $sp.Id -ResourceId $graphSp.Id -AppRoleId $r.Id | Out-Null
+}
+
+$secret = Add-MgApplicationPassword -ApplicationId $app.Id `
+  -PasswordCredential @{ DisplayName = "cowork-reporter"; EndDateTime = (Get-Date).AddYears(1) }
+
+# Azure cost access: assign Cost Management Reader on each subscription in scope
+Connect-AzAccount | Out-Null
+foreach ($sub in (Get-AzSubscription)) {
+  New-AzRoleAssignment -ApplicationId $app.AppId `
+    -RoleDefinitionName "Cost Management Reader" `
+    -Scope "/subscriptions/$($sub.Id)" -ErrorAction SilentlyContinue | Out-Null
+  Write-Host "Cost Management Reader granted on $($sub.Name)"
+}
+
+Write-Host "Tenant ID:     $((Get-MgContext).TenantId)"
+Write-Host "Client ID:     $($app.AppId)"
+Write-Host "Client secret: $($secret.SecretText)"
+```
+
+### The two CSV uploads
+
+Neither of these has a Microsoft API — the admin-centre **Export** button is the supported path.
+
+**Cowork usage report (tasks & adoption).** M365 admin centre (`admin.cloud.microsoft`) →
+**Copilot → Cowork → Usage** (data from 1 April 2026; default window 28 days) → **Export**. Then
+**Upload CSV → Cowork usage report**, setting the report period (7/28/90/180) to match the window
+you exported.
+
+**Copilot Credits / Cost Management (credit consumption).** M365 admin centre → **Copilot → Cost
+Management**, or **Reports → Usage → Microsoft Copilot → Credits**. Choose the **Consumption** tab
+and a scope (by user, by service — includes a "Cowork" row — or by group), then **Export CSV**. Then
+**Upload CSV → Copilot Credits / Cost Management**, picking the matching export scope. Re-uploading a
+fresher export updates the rows.
+
+## Quick start (local)
+
+```powershell
+# 1. Create your env file and a Fernet key
 Copy-Item .env.example .env
-# generate a Fernet key and paste it into .env (FERNET_KEY=...)
 python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+# paste the printed value into FERNET_KEY in .env
+
+# 2. Start the full stack (api + worker + postgres + frontend)
 docker compose up --build
 ```
 
-- Dashboard: http://localhost:5174
-- API / Swagger: http://localhost:8001/docs
+- **Dashboard (web UI):** http://localhost:5173
+- **API + Swagger docs:** http://localhost:8000/docs
+- **API health check:** http://localhost:8000/health
+- **Postgres:** localhost:5432 (user/pass/db all `cowork` by default)
 
-Sign in with `ADMIN_USERNAME` / `ADMIN_PASSWORD` from `.env`. On the **Settings**
-page, click **Seed demo data** to populate the dashboards without live sources.
+On first start an admin login is seeded from `ADMIN_USERNAME` / `ADMIN_PASSWORD` in `.env`
+(defaults `admin` / `change-me` — change these).
 
-> Ports default to 5174/8001/5433 so this can run alongside sibling solutions
-> on one machine.
+## First-run checklist
 
-## Configure live data
+1. `docker compose up` (or deploy to Azure).
+2. Sign in with `ADMIN_USERNAME` / `ADMIN_PASSWORD` (seeded automatically on first start).
+3. **Settings** → follow the guided wizard to create the app registration and grant Cost Management
+   Reader, then enter Tenant ID, Client ID and Client secret.
+4. **Test connection** → **Run now**.
+5. **Upload CSV** → load the Cowork usage report and the Copilot Credits export.
+6. **Settings → Historical audit backfill** for history back to Cowork GA.
+7. Explore the dashboard.
 
-The app has a built-in **Setup guide** page with these same steps, so whoever
-operates it doesn't need this README.
-
-### 1. App registration (automated collectors)
-
-One Entra app registration powers all three automated collectors.
-
-1. **Entra admin centre → App registrations → New registration**. Copy the
-   **Directory (tenant) ID** and **Application (client) ID**.
-2. **Certificates & secrets → New client secret**; copy the value immediately.
-3. **API permissions → Add a permission → Microsoft Graph → Application
-   permissions**: add `AuditLogsQuery.Read.All` and `User.Read.All`, then
-   **Grant admin consent**.
-4. Paste tenant ID, client ID and secret into **Settings** and **Test
-   connection**.
-
-> ⚠️ Microsoft began enforcing `AuditLogsQuery.Read.All` in April 2026. The
-> legacy `AuditLog.Read.All` silently returns **zero** Copilot records — grant
-> the *Query* permission above.
-
-### 2. Azure Cost Management (spend by resource group)
-
-1. **Azure portal → Subscriptions** → copy the **Subscription ID** of each
-   subscription holding a Copilot billing-policy resource group.
-2. On each subscription: **Access control (IAM) → Add role assignment →
-   Cost Management Reader**, assigned to the app registration above.
-3. Paste the subscription IDs (comma-separated) into **Settings**, save, and
-   **Test connection** — the "Cost Management read" check should go green.
-4. On the **Chargeback** page, map each resource group to a cost centre / owner.
-
-Cost data restates as charges settle, so the collector re-pulls and replaces a
-trailing window (default 10 days) each run. "Near-real-time" means yesterday's
-costs by mid-morning, not live spend.
-
-### 3. Cowork usage report CSV (tasks & adoption)
-
-There is no API for Cowork task metrics.
-
-1. **M365 admin centre** (`admin.cloud.microsoft`) → **Copilot → Cowork →
-   Usage** tab (data from 1 April 2026; default window 28 days).
-2. Click **Export** to download the CSV (User Principal Name, Display Name,
-   Total/Scheduled/User-initiated Tasks, Active Days, Last Activity Date).
-3. **Upload CSV → Cowork usage report**: choose the file, set the report period
-   (7/28/90/180) matching the window you exported, upload.
-
-### 4. Copilot Credits / Cost Management CSV (credit consumption)
-
-Credit consumption also has no API.
-
-1. **M365 admin centre → Copilot → Cost Management** (Cowork & Work IQ credit
-   billing), or **Reports → Usage → Microsoft Copilot → Credits**.
-2. Choose the **Consumption** tab and the scope (by user, by service — includes
-   a "Cowork" row — or by group).
-3. Click **Export CSV**.
-4. **Upload CSV → Copilot Credits / Cost Management**: pick the matching
-   **Export scope** and upload. Re-uploading a fresher export updates the rows.
-
-### 5. Historical audit backfill
-
-**Settings → Historical audit backfill** deep-loads Cowork events from the
-Purview audit log, chunked into monthly windows, reaching back to Cowork GA
-(June 2026) or a shorter look-back you specify. Safe to re-run — events upsert
-on their ID.
-
-## Deploy to Azure
-
-Click the button at the top. It provisions a PostgreSQL flexible server and two
-Container Apps (api + worker) pulling prebuilt public images from GHCR, and asks
-only for an admin password. Optionally enable Entra ID SSO for read-only viewers.
-
-The Deploy button requires the images to be published and public — push to
-`main` to trigger the **Publish container images** workflow, then set both
-packages' visibility to Public once.
+Just evaluating? Skip steps 3–6 and use **Settings → Demo data → Load demo data** instead.
 
 ## Data & privacy notes
 
-- Per-user usage is framed as **adoption and enablement**, not performance.
-- Report-name concealment (admin centre setting) will hash UPNs in exports if
-  enabled — decide this tenant-wide before relying on user-level detail.
-- Cost data restates; the cost collector does a **rolling-window replace** of the
-  trailing N days each run (idempotent, self-healing).
-- No unsupported internal admin APIs are called — CSV export is the supported
-  path for the two admin-centre reports.
+- **Prompt text is never stored.** Audit gives who, when and which resources were touched — never
+  the content of a Cowork conversation.
+- Per-user usage is framed as **adoption and enablement**, not performance management.
+- Report-name concealment (an admin-centre setting) will hash UPNs in exports if enabled — decide
+  this tenant-wide before relying on user-level detail.
+- Cost data restates as charges settle, so the collector does a **rolling-window replace** of the
+  trailing N days each run (idempotent and self-healing).
+- All data stays in **your** subscription. The app-registration **client secret** is encrypted at
+  rest with a Fernet key and is write-only in the API: it can be set and replaced, never read back.
+- No unsupported internal admin APIs are called — CSV export is the supported path for the two
+  admin-centre reports.
+- Demo data is clearly labelled as such in Settings, and is only ever created or removed by an
+  explicit action.
+
+## License
+
+MIT. Community project — no Microsoft support agreement or SLA.

@@ -282,3 +282,60 @@ async def usage_trend(
         )
         for r in rows
     ]
+
+
+@router.get("/about")
+async def get_about() -> dict:
+    """Version and build metadata for the About page."""
+    from shared.version import APP_VERSION, BUILD_DATE, BUILD_TIME
+
+    return {
+        "version": APP_VERSION,
+        "build_date": BUILD_DATE,
+        "build_time": BUILD_TIME,
+    }
+
+
+@router.get("/freshness")
+async def get_freshness(session: AsyncSession = Depends(get_session)) -> dict:
+    """Data-freshness summary for the About page.
+
+    Reports row counts and the earliest/latest dates across the two fact
+    streams (audit events and Cowork usage), plus the last collector run.
+    """
+    from shared.models import CoworkEvent, CoworkUsage, DailyCost, DirectoryUser, JobRun
+
+    cowork_events = await session.scalar(select(func.count()).select_from(CoworkEvent)) or 0
+    usage_rows = await session.scalar(select(func.count()).select_from(CoworkUsage)) or 0
+    cost_rows = await session.scalar(select(func.count()).select_from(DailyCost)) or 0
+    directory_users = await session.scalar(select(func.count()).select_from(DirectoryUser)) or 0
+
+    earliest_event = await session.scalar(select(func.min(CoworkEvent.created_at)))
+    latest_event = await session.scalar(select(func.max(CoworkEvent.created_at)))
+    earliest_cost = await session.scalar(select(func.min(DailyCost.cost_date)))
+    latest_cost = await session.scalar(select(func.max(DailyCost.cost_date)))
+
+    last = await session.scalar(select(JobRun).order_by(JobRun.started_at.desc()).limit(1))
+
+    def _iso(value) -> str | None:
+        return value.isoformat() if value else None
+
+    return {
+        "cowork_events": int(cowork_events),
+        "cowork_usage_rows": int(usage_rows),
+        "daily_cost_rows": int(cost_rows),
+        "directory_users": int(directory_users),
+        "earliest_event": _iso(earliest_event),
+        "latest_event": _iso(latest_event),
+        "earliest_cost": _iso(earliest_cost),
+        "latest_cost": _iso(latest_cost),
+        "last_run": (
+            {
+                "status": last.status,
+                "started_at": _iso(last.started_at),
+                "finished_at": _iso(last.finished_at),
+            }
+            if last
+            else None
+        ),
+    }

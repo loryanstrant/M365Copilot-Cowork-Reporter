@@ -4,18 +4,18 @@ export default function HelpPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-slate-800">Setup &amp; data guide</h1>
-        <p className="text-sm text-slate-500">
+        <h1 className="text-2xl font-bold">Setup &amp; data guide</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400">
           How to connect the automated sources and export the two admin-centre CSVs.
         </p>
       </div>
 
       <Card title="1. App registration (automated collectors)">
-        <p className="mb-3 text-sm text-slate-600">
+        <p className="mb-3 text-sm text-slate-600 dark:text-slate-300">
           One Entra app registration powers all three automated collectors: Purview
           audit (Cowork events), directory users, and Azure cost.
         </p>
-        <ol className="ml-5 list-decimal space-y-2 text-sm text-slate-600">
+        <ol className="ml-5 list-decimal space-y-2 text-sm text-slate-600 dark:text-slate-300">
           <li>
             In <strong>Entra admin centre → App registrations → New registration</strong>,
             create an app (single tenant is fine). Copy the{" "}
@@ -45,11 +45,11 @@ export default function HelpPage() {
       </Card>
 
       <Card title="2. Azure Cost Management (spend by resource group)">
-        <p className="mb-3 text-sm text-slate-600">
+        <p className="mb-3 text-sm text-slate-600 dark:text-slate-300">
           Copilot pay-as-you-go spend lands on Azure resource groups (one per billing
           policy). This connects to the Cost Management Query API to pull daily cost.
         </p>
-        <ol className="ml-5 list-decimal space-y-2 text-sm text-slate-600">
+        <ol className="ml-5 list-decimal space-y-2 text-sm text-slate-600 dark:text-slate-300">
           <li>
             In the <strong>Azure portal → Subscriptions</strong>, open each subscription
             that holds a Copilot billing-policy resource group and copy its{" "}
@@ -71,7 +71,7 @@ export default function HelpPage() {
             centre / owner so spend rolls up per business unit.
           </li>
         </ol>
-        <div className="mt-3 rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-500">
+        <div className="mt-3 rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-500 dark:text-slate-400 dark:bg-slate-800/60">
           Cost data restates as charges settle, so the collector re-pulls and replaces a
           trailing window (default 10 days) each run — figures for the current period keep
           moving until the invoice closes. “Near-real-time” means yesterday’s costs by
@@ -80,11 +80,11 @@ export default function HelpPage() {
       </Card>
 
       <Card title="3. Cowork usage report CSV (tasks &amp; adoption)">
-        <p className="mb-3 text-sm text-slate-600">
+        <p className="mb-3 text-sm text-slate-600 dark:text-slate-300">
           There is no API for Cowork task metrics — export the CSV and upload it on the{" "}
           <strong>Upload CSV</strong> page.
         </p>
-        <ol className="ml-5 list-decimal space-y-2 text-sm text-slate-600">
+        <ol className="ml-5 list-decimal space-y-2 text-sm text-slate-600 dark:text-slate-300">
           <li>
             Go to the <strong>Microsoft 365 admin centre</strong> (
             <code>admin.cloud.microsoft</code>).
@@ -106,11 +106,11 @@ export default function HelpPage() {
       </Card>
 
       <Card title="4. Copilot Credits / Cost Management CSV (credit consumption)">
-        <p className="mb-3 text-sm text-slate-600">
+        <p className="mb-3 text-sm text-slate-600 dark:text-slate-300">
           Credit consumption also has no API — export it and upload on the{" "}
           <strong>Upload CSV</strong> page.
         </p>
-        <ol className="ml-5 list-decimal space-y-2 text-sm text-slate-600">
+        <ol className="ml-5 list-decimal space-y-2 text-sm text-slate-600 dark:text-slate-300">
           <li>
             In the <strong>Microsoft 365 admin centre</strong>, open{" "}
             <strong>Copilot → Cost Management</strong> (the Cowork &amp; Work IQ credit
@@ -130,7 +130,7 @@ export default function HelpPage() {
             export just updates the figures.
           </li>
         </ol>
-        <div className="mt-3 rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-500">
+        <div className="mt-3 rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-500 dark:text-slate-400 dark:bg-slate-800/60">
           Tip: if the cost-centre / business-unit columns are blank, those aren’t standard
           Entra fields — an admin must populate department / a custom attribute for the
           org rollups to show.
@@ -138,7 +138,7 @@ export default function HelpPage() {
       </Card>
 
       <Card title="Privacy framing">
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-slate-600 dark:text-slate-300">
           Present per-user figures as <strong>adoption and enablement</strong> (where is
           training needed, which teams haven’t started), not individual performance. If
           the tenant’s “Conceal user, group, and site names in all reports” setting is on,

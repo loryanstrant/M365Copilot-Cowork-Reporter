@@ -27,8 +27,8 @@ export default function OverviewPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-slate-800">Overview</h1>
-        <p className="text-sm text-slate-500">
+        <h1 className="text-2xl font-bold">Overview</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400">
           Cowork consumption and usage across the tenant (last 30 days).
         </p>
       </div>
@@ -71,7 +71,7 @@ export default function OverviewPage() {
             <SourceRow label="Cowork usage rows (CSV)" value={status.cowork_usage_rows} />
             <SourceRow label="Credit rows (CSV)" value={status.credit_rows} />
           </div>
-          <div className="mt-4 border-t border-slate-100 pt-3 text-xs text-slate-500">
+          <div className="mt-4 border-t border-slate-100 pt-3 text-xs text-slate-500 dark:text-slate-400 dark:border-slate-800">
             {status.last_run
               ? `Last collector run: ${status.last_run.status} at ${fmtDate(
                   status.last_run.finished_at || status.last_run.started_at,
@@ -99,8 +99,8 @@ function SourceRow({
   auto?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between rounded-md bg-slate-50 px-3 py-2">
-      <span className="text-slate-600">
+    <div className="flex items-center justify-between rounded-md bg-slate-50 px-3 py-2 dark:bg-slate-800/60">
+      <span className="text-slate-600 dark:text-slate-300">
         {label}
         <span
           className={`ml-2 rounded px-1.5 py-0.5 text-[10px] uppercase ${
@@ -110,7 +110,7 @@ function SourceRow({
           {auto ? "auto" : "csv"}
         </span>
       </span>
-      <span className="font-medium text-slate-800">{fmtNumber(value)}</span>
+      <span className="font-medium text-slate-800 dark:text-slate-100">{fmtNumber(value)}</span>
     </div>
   );
 }
