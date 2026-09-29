@@ -288,6 +288,11 @@ class AppConfig(Base):
     # and repurposing it would hand a personal view to people a tenant had
     # deliberately excluded.
     org_view_group_id: Mapped[str | None] = mapped_column(Text)
+    # Membership of this group grants administrator rights, so admin does not
+    # have to be a shared username and password. Blank grants admin to nobody:
+    # unlike the org view, administration fails closed. Stored in the clear
+    # rather than encrypted — a group object ID is an identifier, not a secret.
+    admin_group_id: Mapped[str | None] = mapped_column(Text)
     # Recurring ingest cadence (hours). Cost refreshes every 4h; 6-8h recommended.
     schedule_interval_hours: Mapped[int] = mapped_column(Integer, default=8)
     updated_at: Mapped[datetime] = mapped_column(

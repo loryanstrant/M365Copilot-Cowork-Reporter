@@ -40,6 +40,55 @@ function NavSectionLabel({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * Who is signed in: name, then the identifier beneath it, then the role.
+ *
+ * The identifier is the UPN, not the account name. They differ for the local
+ * password admin — whose account is called "admin" while the person on screen
+ * may be someone else entirely — and a footer reading "Elsie Duarte / admin /
+ * ADMIN" tells the reader nothing they didn't already know.
+ *
+ * The second line is dropped when it would only repeat the first, which is the
+ * case for a directory user with no display name and for the local admin
+ * before any persona is bound.
+ */
+function SignedInAs({
+  displayName,
+  upn,
+  username,
+  role,
+}: {
+  displayName: string | null;
+  upn: string | null;
+  username: string;
+  role: string;
+}) {
+  const primary = displayName ?? upn ?? username;
+  const identifier = upn ?? username;
+
+  return (
+    <>
+      <div
+        className="truncate font-medium text-slate-800 dark:text-slate-100"
+        title={primary}
+      >
+        {primary}
+      </div>
+      {identifier !== primary && (
+        <div
+          className="truncate text-xs text-slate-400 dark:text-slate-500"
+          title={identifier}
+        >
+          {identifier}
+        </div>
+      )}
+      <div className="mb-3 mt-1 text-xs uppercase tracking-wide text-slate-400">
+        {role}
+      </div>
+    </>
+  );
+}
+
 export default function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const { theme, toggle } = useTheme();
@@ -108,12 +157,12 @@ export default function Layout({ children }: { children: ReactNode }) {
             <span aria-hidden>{theme === "dark" ? "🌙" : "☀️"}</span>
           </button>
           <div>
-            <div className="font-medium text-slate-800 dark:text-slate-100">
-              {user?.username}
-            </div>
-            <div className="mb-3 text-xs uppercase tracking-wide text-slate-400">
-              {user?.role}
-            </div>
+            <SignedInAs
+              displayName={user?.display_name ?? null}
+              upn={user?.upn ?? null}
+              username={user?.username ?? ""}
+              role={user?.role ?? ""}
+            />
             <button
               onClick={logout}
               className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"

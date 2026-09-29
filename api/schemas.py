@@ -22,6 +22,15 @@ class TokenOut(BaseModel):
 class UserOut(BaseModel):
     username: str
     role: str
+    # Entra's display name. None for the password admin and for tokens issued
+    # before display names were carried, so the UI falls back to the username.
+    display_name: str | None = None
+    # The signed-in person's UPN. Reported separately from ``username`` because
+    # they are not the same thing: ``username`` is the account that signed in
+    # ("admin" for the local account), whereas this identifies the *person* the
+    # data belongs to. The sidebar needs the latter under the display name —
+    # showing the account name there says nothing about who is on screen.
+    upn: str | None = None
     # Whether this user may see organisation-wide data. Drives whether the SPA
     # offers the org view or shows it locked.
     can_view_org: bool = True
@@ -46,6 +55,7 @@ class AppConfigIn(BaseModel):
     audit_backfill_days: int | None = None
     report_access_group_id: str | None = None
     org_view_group_id: str | None = None
+    admin_group_id: str | None = None
     schedule_interval_hours: int | None = None
 
 
@@ -58,6 +68,7 @@ class AppConfigOut(BaseModel):
     audit_backfill_days: int = 30
     report_access_group_id: str | None = None
     org_view_group_id: str | None = None
+    admin_group_id: str | None = None
     schedule_interval_hours: int = 8
     configured: bool = False
     updated_at: datetime | None = None

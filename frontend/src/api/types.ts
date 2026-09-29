@@ -3,6 +3,12 @@
 export interface User {
   username: string;
   role: string;
+  /** Entra display name. Null for the password admin, and for tokens issued
+   *  before display names were carried, so always fall back to the username. */
+  display_name: string | null;
+  /** The signed-in person's UPN — not the same as `username`, which is the
+   *  account that signed in ("admin" for the local account). */
+  upn: string | null;
   /** May see organisation-wide data (admin, or in the org-view group). */
   can_view_org: boolean;
   /** Has an Entra identity to filter a personal view to. False for the
@@ -110,6 +116,8 @@ export interface AppConfig {
   report_access_group_id: string | null;
   /** Members may see organisation-wide data. Null = open to all signed-in users. */
   org_view_group_id: string | null;
+  /** Members get admin on Entra sign-in. Null = nobody does (fails closed). */
+  admin_group_id: string | null;
   schedule_interval_hours: number;
   configured: boolean;
   updated_at: string | null;

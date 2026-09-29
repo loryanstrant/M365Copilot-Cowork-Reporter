@@ -49,6 +49,7 @@ export default function SettingsPage() {
         schedule_interval_hours: cfg!.schedule_interval_hours,
         report_access_group_id: cfg!.report_access_group_id,
         org_view_group_id: cfg!.org_view_group_id,
+        admin_group_id: cfg!.admin_group_id,
       };
       if (secret) body.client_secret = secret;
       const updated = await api<AppConfig>("/admin/config", {
@@ -219,6 +220,24 @@ export default function SettingsPage() {
               sees only their own activity. Separate from the group above, which
               decides who may open the report at all. Administrators always have
               access.
+            </p>
+          </div>
+          <div>
+            <label className={label}>
+              Admin group ID (optional, group object ID)
+            </label>
+            <input
+              className={field}
+              value={cfg.admin_group_id || ""}
+              onChange={(e) => setCfg({ ...cfg, admin_group_id: e.target.value })}
+              placeholder="Leave blank so only the local admin account can administer"
+            />
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              Members of this group become administrators when they sign in with
+              Entra ID, so you don't have to share the admin password. Unlike the
+              two groups above, leaving this blank grants administrator rights to
+              nobody — the local admin account is unaffected, and is how you set
+              this field in the first place.
             </p>
           </div>
         </div>
