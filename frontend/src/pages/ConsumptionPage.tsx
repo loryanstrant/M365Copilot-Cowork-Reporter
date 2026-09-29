@@ -12,8 +12,11 @@ import {
 } from "recharts";
 import { api } from "../api/client";
 import type { CostByGroup, CostTrend } from "../api/types";
-import { Card, Empty } from "../components/Card";
-import { fmtMoney } from "../lib/format";
+import ChartCard from "../components/ChartCard";
+import Empty from "../components/Empty";
+import { fmtDayShort, fmtMoney } from "../lib/format";
+import ChartTooltip from "../components/ChartTooltip";
+import { CHART_COLORS } from "../components/chartTheme";
 
 export default function ConsumptionPage() {
   const [byGroup, setByGroup] = useState<CostByGroup[]>([]);
@@ -49,30 +52,35 @@ export default function ConsumptionPage() {
       )}
 
       {trend.length > 0 && (
-        <Card title="Daily Azure cost (30 days)">
+        <ChartCard title="Daily Azure cost (30 days)">
           <ResponsiveContainer width="100%" height={260}>
             <LineChart data={trend}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" />
-              <XAxis dataKey="cost_date" tick={{ fontSize: 11 }} />
+              <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-700" />
+              <XAxis
+                dataKey="cost_date"
+                tick={{ fontSize: 11 }}
+                tickFormatter={(d: string) => fmtDayShort(d)}
+                minTickGap={28}
+              />
               <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(v: number) => fmtMoney(v, currency)} />
+              <Tooltip content={<ChartTooltip formatValue={(v) => fmtMoney(v, currency)} />} />
               <Line
                 type="monotone"
                 dataKey="cost"
-                stroke="#2f5ae0"
+                stroke={CHART_COLORS[0]}
                 strokeWidth={2}
                 dot={false}
               />
             </LineChart>
           </ResponsiveContainer>
-        </Card>
+        </ChartCard>
       )}
 
       {byGroup.length > 0 && (
-        <Card title="Cost by resource group → chargeback">
+        <ChartCard title="Cost by resource group → chargeback">
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={byGroup} layout="vertical" margin={{ left: 40 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" />
+              <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-700" />
               <XAxis type="number" tick={{ fontSize: 11 }} />
               <YAxis
                 type="category"
@@ -80,8 +88,8 @@ export default function ConsumptionPage() {
                 width={160}
                 tick={{ fontSize: 11 }}
               />
-              <Tooltip formatter={(v: number) => fmtMoney(v, currency)} />
-              <Bar dataKey="cost" fill="#3b6ef5" radius={[0, 4, 4, 0]} />
+              <Tooltip content={<ChartTooltip formatValue={(v) => fmtMoney(v, currency)} />} />
+              <Bar dataKey="cost" fill={CHART_COLORS[0]} radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
           <table className="mt-4 w-full text-sm">
@@ -108,7 +116,7 @@ export default function ConsumptionPage() {
             Unmapped resource groups appear in the Chargeback admin page — map them to a
             cost centre there.
           </p>
-        </Card>
+        </ChartCard>
       )}
     </div>
   );

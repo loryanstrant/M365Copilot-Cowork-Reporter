@@ -32,8 +32,10 @@ from shared.models import (
     IngestState,
     JobRun,
 )
+from shared.demo import retire_demo_persona
 from shared.upsert import bulk_upsert
 from worker.graph import ApiClient, AppAuth, GraphError
+from worker.licensing import copilot_granting_skus
 from worker.transforms import (
     is_cowork_event,
     is_included_directory_user,
@@ -54,6 +56,7 @@ _EVENT_UPDATE_KEYS = [
     "raw_json",
 ]
 _USER_UPDATE_KEYS = [
+    "has_copilot_license",
     "upn", "email", "display_name", "given_name", "surname", "job_title",
     "company_name", "department", "office_location", "city", "state", "country",
     "usage_location", "employee_id", "employee_type", "manager_id",
@@ -150,12 +153,36 @@ async def collect_cowork_events(
     return {"scanned": scanned, "cowork_events": inserted}
 
 
+async def resolve_granting_skus(client: ApiClient) -> set[str]:
+    """Which of this tenant's own SKUs grant Copilot.
+
+    Asked once per ingest. A tenant that owns no Copilot subscription returns
+    an empty set, which is a real answer — everyone is then unlicensed — and
+    not an error. Cowork reads the whole directory and flags each row, so
+    unlike a SKU-filtered query there is no OData filter here for an empty set
+    to collapse into.
+    """
+    skus = await client.get_subscribed_skus()
+    return copilot_granting_skus(skus)
+
+
 async def collect_directory_users(
     session: AsyncSession, client: ApiClient
 ) -> dict[str, Any]:
-    """Upsert enabled member users into ``dim_user``."""
+    """Upsert enabled member users into ``dim_user``, flagging Copilot licences."""
     batch: list[dict[str, Any]] = []
     count = 0
+
+    try:
+        granting = await resolve_granting_skus(client)
+    except Exception as exc:
+        # Licence detection is an enrichment, not the point of this collector.
+        # If /subscribedSkus fails, still import the directory rather than lose
+        # every user — they are flagged unlicensed until the next successful run.
+        logger.warning("Could not read subscribed SKUs, licences unresolved: %s", exc)
+        granting = set()
+    if not granting:
+        logger.info("No subscription in this tenant grants Copilot.")
 
     async def flush() -> int:
         nonlocal batch
@@ -171,11 +198,11 @@ async def collect_directory_users(
     async for user in client.iter_directory_users():
         if not is_included_directory_user(user):
             continue
-        batch.append(transform_directory_user(user))
+        batch.append(transform_directory_user(user, granting))
         if len(batch) >= 500:
             count += await flush()
     count += await flush()
-    return {"users": count}
+    return {"users": count, "copilot_licensed": len(granting)}
 
 
 # --- orchestrator -------------------------------------------------------
@@ -214,6 +241,13 @@ async def run_ingest(
             await session.commit()
             stats["audit"] = await collect_cowork_events(session, client, config, now)
             await session.commit()
+            # Real data has arrived, so a demo persona the local admin was
+            # borrowing is now actively misleading — it would go on presenting
+            # a fictional person's activity as their own. Retire it here rather
+            # than relying on someone remembering to press Clear demo data;
+            # real data landing is a better signal than a button nobody has to
+            # press.
+            await retire_demo_persona(session)
             job.status = "success"
             job.finished_at = datetime.now(timezone.utc)
             job.stats = stats

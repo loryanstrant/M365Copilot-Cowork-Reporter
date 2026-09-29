@@ -3,6 +3,12 @@
 export interface User {
   username: string;
   role: string;
+  /** Entra display name. Null for the password admin, and for tokens issued
+   *  before display names were carried, so always fall back to the username. */
+  display_name: string | null;
+  /** The signed-in person's UPN — not the same as `username`, which is the
+   *  account that signed in ("admin" for the local account). */
+  upn: string | null;
   /** May see organisation-wide data (admin, or in the org-view group). */
   can_view_org: boolean;
   /** Has an Entra identity to filter a personal view to. False for the
@@ -92,6 +98,11 @@ export interface DirectoryUser {
   manager_name: string | null;
   user_type: string | null;
   account_enabled: boolean | null;
+  /** Holds a Copilot-granting SKU with the plan enabled. Null = undetermined. */
+  has_copilot_license: boolean | null;
+  cowork_events: number;
+  total_tasks: number;
+  last_activity_date: string | null;
 }
 
 export interface UsageTrend {
@@ -110,6 +121,8 @@ export interface AppConfig {
   report_access_group_id: string | null;
   /** Members may see organisation-wide data. Null = open to all signed-in users. */
   org_view_group_id: string | null;
+  /** Members get admin on Entra sign-in. Null = nobody does (fails closed). */
+  admin_group_id: string | null;
   schedule_interval_hours: number;
   configured: boolean;
   updated_at: string | null;
@@ -160,4 +173,72 @@ export interface UploadResult {
   imported: number;
   skipped: number;
   detail: string | null;
+}
+
+export interface MyActivity {
+  display_name: string | null;
+  user_principal_name: string | null;
+  days: number;
+  sessions: number;
+  tools: number;
+  files: number;
+  active_days: number;
+  last_activity_date: string | null;
+  has_data: boolean;
+}
+
+export interface MyDay {
+  day: string;
+  sessions: number;
+  tools: number;
+  files: number;
+}
+
+export interface MyTopItem {
+  name: string | null;
+  value: number;
+}
+
+export interface PeerStat {
+  label: string;
+  mine: number;
+  team_median: number;
+  org_median: number;
+  team_people: number;
+  org_people: number;
+}
+
+export interface MyStanding {
+  /** Department, or the manager's name, or null when neither is known. */
+  team_label: string | null;
+  org_percentile: number;
+  stats: PeerStat[];
+}
+
+export interface BriefingDelta {
+  label: string;
+  current: number;
+  previous: number;
+  /** Null when the previous period was zero — there is no honest percentage. */
+  change_pct: number | null;
+}
+
+export interface BriefingItem {
+  name: string | null;
+  value: number;
+  previous: number;
+}
+
+export interface Briefing {
+  window_days: number;
+  period_start: string;
+  previous_start: string;
+  has_data: boolean;
+  currency: string | null;
+  deltas: BriefingDelta[];
+  licensed_users: number;
+  active_licensed_users: number;
+  idle_licensed_users: number;
+  top_agents: BriefingItem[];
+  top_resource_groups: BriefingItem[];
 }

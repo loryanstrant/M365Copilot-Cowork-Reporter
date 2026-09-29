@@ -68,8 +68,11 @@ To evaluate without a tenant connection, use **Settings → Demo data → Load d
 
 ## Entra single sign-on (optional)
 
-The dashboard is protected by the admin password by default. Entra sign-in adds read-only viewer
-access with work accounts, while administration stays behind the password.
+The dashboard is protected by the admin password by default. Entra sign-in lets people use their
+work accounts: they get the viewer role unless they belong to the **admin security group** set in
+Settings, whose members become administrators. That field is blank by default and grants admin to
+nobody, so single sign-on cannot widen access on upgrade; the local admin account is unaffected
+and is how you configure the group in the first place.
 
 Sign-in is performed by the app itself rather than by the hosting platform, so it behaves the same
 on Azure Container Apps, Docker on any host, or Kubernetes. Nothing needs configuring on the

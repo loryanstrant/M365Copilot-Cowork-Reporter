@@ -64,6 +64,7 @@ def _to_out(cfg: AppConfig | None) -> AppConfigOut:
         audit_backfill_days=cfg.audit_backfill_days or 30,
         report_access_group_id=cfg.report_access_group_id,
         org_view_group_id=cfg.org_view_group_id,
+        admin_group_id=cfg.admin_group_id,
         schedule_interval_hours=cfg.schedule_interval_hours or 8,
         configured=bool(
             cfg.tenant_id and cfg.client_id and cfg.client_secret_encrypted
@@ -111,6 +112,8 @@ async def put_config(
         cfg.report_access_group_id = body.report_access_group_id.strip() or None
     if body.org_view_group_id is not None:
         cfg.org_view_group_id = body.org_view_group_id.strip() or None
+    if body.admin_group_id is not None:
+        cfg.admin_group_id = body.admin_group_id.strip() or None
     if body.schedule_interval_hours is not None:
         cfg.schedule_interval_hours = max(1, min(body.schedule_interval_hours, 24))
     cfg.updated_by = user.username

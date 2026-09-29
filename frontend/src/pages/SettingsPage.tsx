@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import type { AppConfig, TestConnection } from "../api/types";
-import { Card } from "../components/Card";
+import ChartCard from "../components/ChartCard";
 import DemoDataCard from "../components/DemoDataCard";
 import SetupWizard from "../components/SetupWizard";
 
@@ -49,6 +49,7 @@ export default function SettingsPage() {
         schedule_interval_hours: cfg!.schedule_interval_hours,
         report_access_group_id: cfg!.report_access_group_id,
         org_view_group_id: cfg!.org_view_group_id,
+        admin_group_id: cfg!.admin_group_id,
       };
       if (secret) body.client_secret = secret;
       const updated = await api<AppConfig>("/admin/config", {
@@ -125,7 +126,7 @@ export default function SettingsPage() {
 
       <SetupWizard defaultOpen={!cfg.configured} />
 
-      <Card title="App registration (Graph + Azure)">
+      <ChartCard title="App registration (Graph + Azure)">
         <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
           One app registration drives all automated collectors. Required app roles:{" "}
           <code>AuditLogsQuery.Read.All</code>, <code>User.Read.All</code>, and{" "}
@@ -170,14 +171,14 @@ export default function SettingsPage() {
             />
           </div>
         </div>
-      </Card>
+      </ChartCard>
 
-      <Card title="Sign in with Microsoft (optional)">
+      <ChartCard title="Sign in with Microsoft (optional)">
         <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">
-          Lets colleagues sign in with their work account as read-only viewers. It reuses
-          the app registration above, so there is nothing extra to create — you only need
-          to register the redirect URI below. Administration stays behind the admin
-          password.
+          Lets colleagues sign in with their work account. It reuses the app
+          registration above, so there is nothing extra to create — you only need to
+          register the redirect URI below. Everyone signs in as a viewer unless they
+          are in the admin group set below.
         </p>
         <div className="grid gap-4">
           <div>
@@ -221,10 +222,28 @@ export default function SettingsPage() {
               access.
             </p>
           </div>
+          <div>
+            <label className={label}>
+              Admin group ID (optional, group object ID)
+            </label>
+            <input
+              className={field}
+              value={cfg.admin_group_id || ""}
+              onChange={(e) => setCfg({ ...cfg, admin_group_id: e.target.value })}
+              placeholder="Leave blank so only the local admin account can administer"
+            />
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              Members of this group become administrators when they sign in with
+              Entra ID, so you don't have to share the admin password. Unlike the
+              two groups above, leaving this blank grants administrator rights to
+              nobody — the local admin account is unaffected, and is how you set
+              this field in the first place.
+            </p>
+          </div>
         </div>
-      </Card>
+      </ChartCard>
 
-      <Card title="Collector tuning">
+      <ChartCard title="Collector tuning">
         <div className="grid gap-4 md:grid-cols-3">
           <div>
             <label className={label}>Schedule interval (hours)</label>
@@ -260,7 +279,7 @@ export default function SettingsPage() {
             />
           </div>
         </div>
-      </Card>
+      </ChartCard>
 
       <div className="flex flex-wrap gap-3">
         <button onClick={save} disabled={busy} className="btn-primary">
@@ -277,7 +296,7 @@ export default function SettingsPage() {
       {msg && <div className="text-sm text-slate-600 dark:text-slate-300">{msg}</div>}
 
       {test && (
-        <Card title="Connection test">
+        <ChartCard title="Connection test">
           <ul className="space-y-1 text-sm">
             <Check ok={test.graph_token} label="Graph token acquired" />
             <Check ok={test.directory_read} label="Directory read (User.Read.All)" />
@@ -290,10 +309,10 @@ export default function SettingsPage() {
               {test.detail}
             </div>
           )}
-        </Card>
+        </ChartCard>
       )}
 
-      <Card title="Historical audit backfill">
+      <ChartCard title="Historical audit backfill">
         <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">
           Deep-loads Cowork events from the Purview audit log, chunked into monthly
           windows. Reaches back to Cowork GA (June 2026) by default, or set a shorter
@@ -349,7 +368,7 @@ export default function SettingsPage() {
             ) : null}
           </div>
         )}
-      </Card>
+      </ChartCard>
     </div>
   );
 }

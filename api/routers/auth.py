@@ -2,7 +2,8 @@
 
 Entra sign-in is run by the app itself (see ``api.oidc``), so it works on any
 host rather than only on Azure. The password gate remains the first-run and
-break-glass route, and administration stays behind it.
+break-glass route; administration is otherwise granted by the Entra admin group,
+evaluated per request rather than baked into a token (see :func:`api.auth.is_admin`).
 """
 from __future__ import annotations
 
@@ -18,7 +19,9 @@ from api.auth import (
     authenticate_user,
     can_view_org,
     create_access_token,
+    effective_role,
     get_current_user,
+    resolve_identity,
 )
 from api.oidc import (
     STATE_COOKIE,
@@ -138,11 +141,15 @@ async def oidc_callback(
     if group_id and not await is_group_member(principal, group_id, session):
         return _fail("You are not a member of the group allowed to view this report.")
 
+    # Entra sign-ins are always minted as viewers. Administrator rights are
+    # decided per request from the admin group (see api.auth.is_admin), so the
+    # role in the token is a floor, never the final word.
     token = create_access_token(
         principal.name,
         "viewer",
         oid=principal.object_id,
         upn=principal.name,
+        display_name=principal.display_name,
     )
     response = RedirectResponse(f"/#sso={token}", status_code=status.HTTP_302_FOUND)
     response.delete_cookie(STATE_COOKIE, path=_COOKIE_PATH)
@@ -154,9 +161,12 @@ async def me(
     user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> UserOut:
+    display_name, upn, personal = await resolve_identity(user, session)
     return UserOut(
         username=user.username,
-        role=user.role,
+        role=await effective_role(user, session),
+        display_name=display_name,
+        upn=upn,
         can_view_org=await can_view_org(user, session),
-        has_personal_view=user.has_personal_view,
+        has_personal_view=personal,
     )

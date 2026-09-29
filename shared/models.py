@@ -215,6 +215,12 @@ class DirectoryUser(Base):
     manager_name: Mapped[str | None] = mapped_column(Text)
     account_enabled: Mapped[bool | None] = mapped_column(Boolean)
     user_type: Mapped[str | None] = mapped_column(Text)
+    # Whether this person holds a SKU granting the "Microsoft Copilot with
+    # Graph-grounded chat" service plan, with that plan still enabled. Derived
+    # at ingest from the tenant's own subscribedSkus rather than a configured
+    # SKU list — see worker/licensing.py. Null means never determined (the row
+    # predates licence detection, or the sync has not run since).
+    has_copilot_license: Mapped[bool | None] = mapped_column(Boolean, index=True)
     # onPremisesExtensionAttributes 1-15 (common home for HR-fed cost centre /
     # business unit values used for chargeback filtering).
     ext1: Mapped[str | None] = mapped_column(Text)
@@ -279,7 +285,7 @@ class AppConfig(Base):
     cost_rolling_window_days: Mapped[int] = mapped_column(Integer, default=10)
     # First-run look-back for the Purview audit collector.
     audit_backfill_days: Mapped[int] = mapped_column(Integer, default=30)
-    # Optional Entra SSO gate for read-only viewers.
+    # Optional Entra SSO gate: who may open the report at all.
     report_access_group_id: Mapped[str | None] = mapped_column(Text)
     # Membership of this group unlocks the organisation-wide view. Blank means
     # the org view is open to everyone who can sign in, which is how the app
@@ -288,6 +294,16 @@ class AppConfig(Base):
     # and repurposing it would hand a personal view to people a tenant had
     # deliberately excluded.
     org_view_group_id: Mapped[str | None] = mapped_column(Text)
+    # Membership of this group grants administrator rights, so admin does not
+    # have to be a shared username and password. Blank grants admin to nobody:
+    # unlike the org view, administration fails closed. Stored in the clear
+    # rather than encrypted — a group object ID is an identifier, not a secret.
+    admin_group_id: Mapped[str | None] = mapped_column(Text)
+    # While demo data is loaded, the local password admin stands in for this
+    # seeded directory user so the personal pages can be reached without Entra.
+    # Written only by the demo seeder; cleared by Clear demo data and by a
+    # successful real ingest. See shared/demo.py.
+    demo_persona_user_id: Mapped[str | None] = mapped_column(Text)
     # Recurring ingest cadence (hours). Cost refreshes every 4h; 6-8h recommended.
     schedule_interval_hours: Mapped[int] = mapped_column(Integer, default=8)
     updated_at: Mapped[datetime] = mapped_column(

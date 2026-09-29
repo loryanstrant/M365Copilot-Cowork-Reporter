@@ -22,6 +22,15 @@ class TokenOut(BaseModel):
 class UserOut(BaseModel):
     username: str
     role: str
+    # Entra's display name. None for the password admin and for tokens issued
+    # before display names were carried, so the UI falls back to the username.
+    display_name: str | None = None
+    # The signed-in person's UPN. Reported separately from ``username`` because
+    # they are not the same thing: ``username`` is the account that signed in
+    # ("admin" for the local account), whereas this identifies the *person* the
+    # data belongs to. The sidebar needs the latter under the display name —
+    # showing the account name there says nothing about who is on screen.
+    upn: str | None = None
     # Whether this user may see organisation-wide data. Drives whether the SPA
     # offers the org view or shows it locked.
     can_view_org: bool = True
@@ -46,6 +55,7 @@ class AppConfigIn(BaseModel):
     audit_backfill_days: int | None = None
     report_access_group_id: str | None = None
     org_view_group_id: str | None = None
+    admin_group_id: str | None = None
     schedule_interval_hours: int | None = None
 
 
@@ -58,6 +68,7 @@ class AppConfigOut(BaseModel):
     audit_backfill_days: int = 30
     report_access_group_id: str | None = None
     org_view_group_id: str | None = None
+    admin_group_id: str | None = None
     schedule_interval_hours: int = 8
     configured: bool = False
     updated_at: datetime | None = None
@@ -171,6 +182,16 @@ class DirectoryUserOut(BaseModel):
     manager_name: str | None
     user_type: str | None
     account_enabled: bool | None
+    # Holds a SKU granting Copilot, with the plan still enabled. None means
+    # never determined — a row that predates licence detection, or a tenant
+    # whose sync has not run since.
+    has_copilot_license: bool | None = None
+    # Activity found for this person in the report data, so a licence that is
+    # being paid for but not used is visible as a row with zeroes rather than
+    # as an absence.
+    cowork_events: int = 0
+    total_tasks: int = 0
+    last_activity_date: datetime | None = None
 
 
 class UsageTrendOut(BaseModel):
@@ -226,3 +247,100 @@ class MyComparisonOut(BaseModel):
     org_median_tasks: int
     people_counted: int
     above_median: bool
+
+
+class MyDayOut(BaseModel):
+    """One day of this person's Cowork activity."""
+
+    day: date
+    sessions: int = 0
+    tools: int = 0
+    files: int = 0
+
+
+class MyTopItemOut(BaseModel):
+    """A ranked agent or tool for this person."""
+
+    name: str | None
+    value: int
+
+
+class PeerStatOut(BaseModel):
+    """One measure, compared against the team and the organisation.
+
+    Only medians are carried — never another individual's figures — so the
+    whole comparison stays safe to show to someone with no organisation-wide
+    access.
+    """
+
+    label: str
+    mine: int
+    team_median: int
+    org_median: int
+    team_people: int = 0
+    org_people: int = 0
+
+
+class MyStandingOut(BaseModel):
+    """How this person compares, and to whom."""
+
+    # The department this person's "team" was taken from, or the manager's name
+    # when they have no department. None when neither is known, in which case
+    # the team comparison is not shown at all rather than shown as zero.
+    team_label: str | None = None
+    # 0-100. 90 means they did more than 90% of the people counted.
+    org_percentile: int = 0
+    stats: list[PeerStatOut] = []
+
+
+class MyActivityOut(BaseModel):
+    """Everything the personal page needs above the session list."""
+
+    display_name: str | None = None
+    user_principal_name: str | None = None
+    days: int = 30
+    sessions: int = 0
+    tools: int = 0
+    files: int = 0
+    active_days: int = 0
+    last_activity_date: datetime | None = None
+    has_data: bool = False
+
+
+# --- executive briefing -------------------------------------------------
+class BriefingDeltaOut(BaseModel):
+    """One measure, this period against the one before it."""
+
+    label: str
+    current: float
+    previous: float
+    # None when the previous period was zero: "up from nothing" has no
+    # meaningful percentage, and rendering it as +100% or ∞ misleads.
+    change_pct: float | None = None
+
+
+class BriefingItemOut(BaseModel):
+    name: str | None
+    value: float
+    previous: float = 0
+
+
+class BriefingOut(BaseModel):
+    """A deterministic executive snapshot.
+
+    Every number here is SQL. Nothing is generated, summarised or inferred by a
+    model — the page assembles its sentences from these figures against fixed
+    thresholds, so it cannot invent a number in front of a customer.
+    """
+
+    window_days: int = 30
+    period_start: date
+    previous_start: date
+    has_data: bool = False
+    currency: str | None = None
+    deltas: list[BriefingDeltaOut] = []
+    licensed_users: int = 0
+    active_licensed_users: int = 0
+    idle_licensed_users: int = 0
+    top_agents: list[BriefingItemOut] = []
+    top_resource_groups: list[BriefingItemOut] = []

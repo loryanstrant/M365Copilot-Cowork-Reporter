@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { Kpis, Status } from "../api/types";
-import { Card, Kpi, Empty } from "../components/Card";
+import ChartCard from "../components/ChartCard";
+import KpiCard from "../components/KpiCard";
+import Empty from "../components/Empty";
 import { fmtMoney, fmtNumber, fmtDate } from "../lib/format";
 
 export default function OverviewPage() {
@@ -36,26 +38,27 @@ export default function OverviewPage() {
       {err && <Empty message={`Could not load metrics: ${err}`} />}
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-        <Kpi
+        <KpiCard
           label="Azure cost (30d)"
           value={kpis ? fmtMoney(kpis.total_cost, kpis.currency) : "—"}
           hint="Cost Management (automated)"
         />
-        <Kpi
+        <KpiCard
           label="Credits consumed"
           value={kpis ? fmtNumber(kpis.total_credits) : "—"}
           hint="Latest admin CSV snapshot"
         />
-        <Kpi
+        <KpiCard
           label="Cowork tasks"
           value={kpis ? fmtNumber(kpis.total_tasks) : "—"}
           hint="Latest usage snapshot"
         />
-        <Kpi
+        <KpiCard
           label="Active Cowork users"
           value={kpis ? fmtNumber(kpis.active_users) : "—"}
+          hint="Ran at least one task in the snapshot"
         />
-        <Kpi
+        <KpiCard
           label="Audit events"
           value={kpis ? fmtNumber(kpis.cowork_events) : "—"}
           hint="Purview CopilotInteraction (Cowork)"
@@ -63,7 +66,7 @@ export default function OverviewPage() {
       </div>
 
       {status && (
-        <Card title="Data sources">
+        <ChartCard title="Data sources">
           <div className="grid grid-cols-2 gap-4 text-sm md:grid-cols-3">
             <SourceRow label="Azure cost rows" value={status.daily_cost_rows} auto />
             <SourceRow label="Audit events" value={status.cowork_events} auto />
@@ -83,7 +86,7 @@ export default function OverviewPage() {
               </span>
             )}
           </div>
-        </Card>
+        </ChartCard>
       )}
     </div>
   );

@@ -49,7 +49,7 @@ export default function LoginPage() {
           }}
         />
         <div className="relative flex items-center gap-3">
-          <img src="/app-logo.png" alt="Copilot Cowork" className="h-11 w-11 drop-shadow" />
+          <img src="/app-logo.png" alt="Microsoft 365 Copilot Cowork" className="h-11 w-11 object-contain drop-shadow" />
           <span className="text-lg font-semibold">M365 Copilot Cowork Reporter</span>
         </div>
         <div className="relative max-w-md">
@@ -70,7 +70,7 @@ export default function LoginPage() {
       <div className="flex w-full items-center justify-center px-6 lg:w-1/2">
         <form onSubmit={onSubmit} className="w-full max-w-sm">
           <div className="mb-8 flex flex-col items-center text-center lg:hidden">
-            <img src="/app-logo.png" alt="Copilot Cowork" className="h-14 w-14 object-contain" />
+            <img src="/app-logo.png" alt="Microsoft 365 Copilot Cowork" className="h-14 w-14 object-contain" />
             <div className="mt-3 text-lg font-semibold text-brand-600 dark:text-brand-500">
               M365 Copilot Cowork Reporter
             </div>

@@ -217,6 +217,19 @@ class ApiClient:
         data = await self._request("POST", url, json_body={"groupIds": group_ids})
         return list(data.get("value", []))
 
+    # -- licensing -------------------------------------------------------
+    async def get_subscribed_skus(self) -> list[dict[str, Any]]:
+        """The tenant's own subscriptions, with the service plans each contains.
+
+        This is what makes licence detection configuration-free: rather than
+        matching a hard-coded list of SKU IDs, the caller asks which of *this*
+        tenant's subscriptions carry the Copilot service plan. Needs no extra
+        Graph permission — Organization.Read.All is implied by the directory
+        read this app already does.
+        """
+        data = await self._request("GET", f"{GRAPH_BASE}/subscribedSkus")
+        return list(data.get("value", []))
+
     # -- directory users -------------------------------------------------
     async def iter_directory_users(self) -> AsyncIterator[dict[str, Any]]:
         params = {
@@ -224,7 +237,7 @@ class ApiClient:
                 "id,userPrincipalName,mail,userType,jobTitle,companyName,"
                 "department,officeLocation,city,state,country,usageLocation,"
                 "displayName,givenName,surname,employeeId,employeeType,"
-                "accountEnabled,onPremisesExtensionAttributes"
+                "accountEnabled,onPremisesExtensionAttributes,assignedLicenses"
             ),
             "$expand": "manager($select=id,displayName)",
             "$top": 999,
