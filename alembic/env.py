@@ -21,7 +21,13 @@ config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)
 
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # disable_existing_loggers=False matters when this runs in-process on API
+    # startup rather than from the alembic CLI. The default (True) switches off
+    # every logger configured before it — including uvicorn's — so the app goes
+    # silent from "Running database migrations" onwards: no "Application
+    # startup complete", no access logs, nothing. It reads exactly like a hang
+    # at startup, and it cost a verification session an hour chasing one.
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 target_metadata = Base.metadata
 
