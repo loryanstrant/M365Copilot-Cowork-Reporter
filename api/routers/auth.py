@@ -35,6 +35,7 @@ from api.oidc import (
 )
 from api.schemas import AuthConfigOut, LoginIn, TokenOut, UserOut
 from shared.db import get_session
+from shared.version import BUILD_DATE, BUILD_TIME
 from shared.models import AppConfig
 
 logger = logging.getLogger("api.auth")
@@ -77,6 +78,8 @@ async def auth_config(
     return AuthConfigOut(
         entra_enabled=is_configured(cfg),
         redirect_uri=redirect_uri(request),
+        build_date=BUILD_DATE,
+        build_time=BUILD_TIME,
     )
 
 
