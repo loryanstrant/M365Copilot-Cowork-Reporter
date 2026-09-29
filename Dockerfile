@@ -12,11 +12,13 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python deps first for better layer caching.
+# Install Python deps first for better layer caching. This list duplicates
+# pyproject.toml's — keep the two in step, or the image and the test
+# environment disagree about what is installed.
 COPY pyproject.toml ./
 RUN pip install --upgrade pip \
     && pip install \
-        "fastapi>=0.115" "uvicorn[standard]>=0.30" "sqlalchemy>=2.0" "alembic>=1.13" \
+        "fastapi>=0.115" "uvicorn[standard]>=0.30" "sqlalchemy[asyncio]>=2.0" "alembic>=1.13" \
         "httpx>=0.27" "msal>=1.30" "apscheduler>=3.10" "pydantic>=2.7" \
         "pydantic-settings>=2.3" "psycopg[binary]>=3.2" "cryptography>=42" \
         "PyJWT>=2.9" "bcrypt>=4.1" "python-multipart>=0.0.9"
