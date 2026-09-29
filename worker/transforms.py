@@ -6,7 +6,9 @@ No I/O here — deterministic and unit-testable. Cowork identification lives in
 from __future__ import annotations
 
 from datetime import date, datetime, timezone
-from typing import Any
+from typing import Any, Iterable
+
+from worker.licensing import has_copilot_license
 
 # Cowork fingerprints (from live Avanoso audit data).
 _COWORK_APP_HOST = "cowork"
@@ -80,8 +82,15 @@ def transform_cowork_event(record: dict[str, Any]) -> dict[str, Any] | None:
     }
 
 
-def transform_directory_user(user: dict[str, Any]) -> dict[str, Any]:
-    """Map a Graph user to a ``dim_user`` row dict."""
+def transform_directory_user(
+    user: dict[str, Any], granting_skus: Iterable[str] = ()
+) -> dict[str, Any]:
+    """Map a Graph user to a ``dim_user`` row dict.
+
+    ``granting_skus`` is the set of this tenant's SKU IDs that carry the
+    Copilot service plan. It is passed in rather than looked up here so the
+    whole directory sync costs one /subscribedSkus call, not one per user.
+    """
     manager = user.get("manager") or {}
     ext = user.get("onPremisesExtensionAttributes") or {}
     row: dict[str, Any] = {
@@ -105,6 +114,7 @@ def transform_directory_user(user: dict[str, Any]) -> dict[str, Any]:
         "manager_name": manager.get("displayName"),
         "account_enabled": user.get("accountEnabled"),
         "user_type": user.get("userType"),
+        "has_copilot_license": has_copilot_license(user, granting_skus),
     }
     for i in range(1, 16):
         row[f"ext{i}"] = ext.get(f"extensionAttribute{i}")

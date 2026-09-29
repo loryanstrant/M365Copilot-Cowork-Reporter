@@ -215,6 +215,12 @@ class DirectoryUser(Base):
     manager_name: Mapped[str | None] = mapped_column(Text)
     account_enabled: Mapped[bool | None] = mapped_column(Boolean)
     user_type: Mapped[str | None] = mapped_column(Text)
+    # Whether this person holds a SKU granting the "Microsoft Copilot with
+    # Graph-grounded chat" service plan, with that plan still enabled. Derived
+    # at ingest from the tenant's own subscribedSkus rather than a configured
+    # SKU list — see worker/licensing.py. Null means never determined (the row
+    # predates licence detection, or the sync has not run since).
+    has_copilot_license: Mapped[bool | None] = mapped_column(Boolean, index=True)
     # onPremisesExtensionAttributes 1-15 (common home for HR-fed cost centre /
     # business unit values used for chargeback filtering).
     ext1: Mapped[str | None] = mapped_column(Text)
