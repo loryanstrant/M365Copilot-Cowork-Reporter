@@ -279,7 +279,7 @@ class AppConfig(Base):
     cost_rolling_window_days: Mapped[int] = mapped_column(Integer, default=10)
     # First-run look-back for the Purview audit collector.
     audit_backfill_days: Mapped[int] = mapped_column(Integer, default=30)
-    # Optional Entra SSO gate for read-only viewers.
+    # Optional Entra SSO gate: who may open the report at all.
     report_access_group_id: Mapped[str | None] = mapped_column(Text)
     # Membership of this group unlocks the organisation-wide view. Blank means
     # the org view is open to everyone who can sign in, which is how the app

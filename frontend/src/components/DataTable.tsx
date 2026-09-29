@@ -1,141 +1,258 @@
 import { useMemo, useState, type ReactNode } from "react";
 
-export interface Column<T> {
+// A reusable, type-aware sortable table. Every column can be sorted in both
+// directions according to its type: text sorts alphabetically, number sorts
+// numerically, and date sorts chronologically (newest/oldest). Empty values
+// (null / undefined / "") always sort to the bottom regardless of direction.
+//
+// Tables of people or other long lists can also opt into a row of per-column
+// filter boxes by passing `filterable`. It is opt-in rather than automatic
+// because most tables here are short summaries where a filter row is noise —
+// but a directory of a few thousand users is unusable without one.
+
+export type ColumnType = "text" | "number" | "date";
+export type SortDir = "asc" | "desc";
+
+export interface Column<Row> {
   key: string;
   header: string;
-  /** Value used for sorting/filtering (string or number). */
-  value: (row: T) => string | number | null | undefined;
-  /** Optional custom cell renderer; defaults to the value. */
-  render?: (row: T) => ReactNode;
-  align?: "left" | "right";
-  /** Set false to disable filtering for this column (e.g. numeric-only). */
+  /** Value type — drives the sort comparator. Defaults to "text". */
+  type?: ColumnType;
+  /** Raw value used for sorting. Omit to make the column non-sortable. */
+  accessor?: (row: Row) => string | number | null | undefined;
+  /** Custom cell content. Defaults to the accessor value ("—" when empty). */
+  render?: (row: Row) => ReactNode;
+  align?: "left" | "right" | "center";
+  /** Force-disable sorting even when an accessor is present. */
+  sortable?: boolean;
+  /** Extra classes for the body cell. */
+  className?: string;
+  /** Exclude this column from the filter row (only relevant when the table
+   *  is filterable). Defaults to filterable when the column has an accessor. */
   filterable?: boolean;
 }
 
-type SortDir = "asc" | "desc";
+export interface SortState {
+  key: string;
+  dir: SortDir;
+}
 
-export default function DataTable<T>({
+interface Props<Row> {
+  columns: Column<Row>[];
+  rows: Row[];
+  getRowKey: (row: Row, index: number) => string | number;
+  initialSort?: SortState;
+  emptyMessage?: string;
+  rowClassName?: (row: Row) => string;
+  /** Show a per-column filter row, and a "N of M rows" count beneath. */
+  filterable?: boolean;
+}
+
+function isEmpty(v: string | number | null | undefined): boolean {
+  return v === null || v === undefined || v === "";
+}
+
+function compareValues(
+  a: string | number,
+  b: string | number,
+  type: ColumnType,
+): number {
+  if (type === "number") return Number(a) - Number(b);
+  if (type === "date") return Date.parse(String(a)) - Date.parse(String(b));
+  return String(a).localeCompare(String(b), undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
+}
+
+// New columns start in the most useful direction: text A→Z, numbers/dates
+// high→low (largest / newest first).
+function defaultDir(type: ColumnType): SortDir {
+  return type === "text" ? "asc" : "desc";
+}
+
+function defaultDisplay(v: string | number | null | undefined): ReactNode {
+  return isEmpty(v) ? "—" : v;
+}
+
+export default function DataTable<Row>({
   columns,
   rows,
-  initialSortKey,
-  initialSortDir = "desc",
-  emptyMessage = "No rows.",
-}: {
-  columns: Column<T>[];
-  rows: T[];
-  initialSortKey?: string;
-  initialSortDir?: SortDir;
-  emptyMessage?: string;
-}) {
-  const [sortKey, setSortKey] = useState<string | undefined>(initialSortKey);
-  const [sortDir, setSortDir] = useState<SortDir>(initialSortDir);
+  getRowKey,
+  initialSort,
+  emptyMessage = "No data yet.",
+  rowClassName,
+  filterable = false,
+}: Props<Row>) {
+  const [sort, setSort] = useState<SortState | null>(initialSort ?? null);
   const [filters, setFilters] = useState<Record<string, string>>({});
 
-  const filtered = useMemo(() => {
-    let out = rows;
-    for (const [key, term] of Object.entries(filters)) {
-      if (!term) continue;
-      const col = columns.find((c) => c.key === key);
-      if (!col) continue;
-      const lc = term.toLowerCase();
-      out = out.filter((r) =>
-        String(col.value(r) ?? "")
+  // Case-insensitive substring per column, ANDed across columns — the same
+  // behaviour people expect from a spreadsheet filter.
+  const filteredRows = useMemo(() => {
+    if (!filterable) return rows;
+    const active = Object.entries(filters).filter(([, term]) => term.trim());
+    if (active.length === 0) return rows;
+    return rows.filter((row) =>
+      active.every(([key, term]) => {
+        const col = columns.find((c) => c.key === key);
+        if (!col?.accessor) return true;
+        return String(col.accessor(row) ?? "")
           .toLowerCase()
-          .includes(lc),
-      );
-    }
-    if (sortKey) {
-      const col = columns.find((c) => c.key === sortKey);
-      if (col) {
-        out = [...out].sort((a, b) => {
-          const av = col.value(a);
-          const bv = col.value(b);
-          if (av == null && bv == null) return 0;
-          if (av == null) return 1;
-          if (bv == null) return -1;
-          let cmp: number;
-          if (typeof av === "number" && typeof bv === "number") cmp = av - bv;
-          else cmp = String(av).localeCompare(String(bv));
-          return sortDir === "asc" ? cmp : -cmp;
-        });
-      }
-    }
-    return out;
-  }, [rows, columns, filters, sortKey, sortDir]);
+          .includes(term.trim().toLowerCase());
+      }),
+    );
+  }, [rows, columns, filters, filterable]);
 
-  function toggleSort(key: string) {
-    if (sortKey === key) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortKey(key);
-      setSortDir("asc");
-    }
+  const sortedRows = useMemo(() => {
+    const rows = filteredRows;
+    if (!sort) return rows;
+    const col = columns.find((c) => c.key === sort.key);
+    if (!col || !col.accessor) return rows;
+    const accessor = col.accessor;
+    const type = col.type ?? "text";
+    const dir = sort.dir;
+    return [...rows].sort((ra, rb) => {
+      const va = accessor(ra);
+      const vb = accessor(rb);
+      const ea = isEmpty(va);
+      const eb = isEmpty(vb);
+      if (ea && eb) return 0;
+      if (ea) return 1; // empties always last
+      if (eb) return -1;
+      const cmp = compareValues(va as string | number, vb as string | number, type);
+      return dir === "asc" ? cmp : -cmp;
+    });
+  }, [filteredRows, sort, columns]);
+
+  function toggle(col: Column<Row>) {
+    const type = col.type ?? "text";
+    setSort((prev) =>
+      prev && prev.key === col.key
+        ? { key: col.key, dir: prev.dir === "asc" ? "desc" : "asc" }
+        : { key: col.key, dir: defaultDir(type) },
+    );
   }
 
+  const alignClass = (a?: Column<Row>["align"]) =>
+    a === "right" ? "text-right" : a === "center" ? "text-center" : "text-left";
+
   return (
-    <div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-slate-200 text-left text-slate-500 dark:border-slate-700 dark:text-slate-400">
-              {columns.map((c) => (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="text-xs uppercase tracking-wide text-slate-400">
+            {columns.map((col) => {
+              const canSort = col.sortable !== false && !!col.accessor;
+              const active = sort?.key === col.key;
+              const state: "asc" | "desc" | "none" = active ? sort!.dir : "none";
+              return (
                 <th
-                  key={c.key}
-                  className={`py-2 ${c.align === "right" ? "text-right" : ""}`}
+                  key={col.key}
+                  aria-sort={
+                    active ? (sort!.dir === "asc" ? "ascending" : "descending") : "none"
+                  }
+                  className={`px-5 py-3 font-medium ${alignClass(col.align)}`}
                 >
-                  <button
-                    onClick={() => toggleSort(c.key)}
-                    className="inline-flex items-center gap-1 font-semibold hover:text-slate-700 dark:hover:text-slate-200"
-                  >
-                    {c.header}
-                    <span className="text-[10px]">
-                      {sortKey === c.key ? (sortDir === "asc" ? "▲" : "▼") : "↕"}
-                    </span>
-                  </button>
-                </th>
-              ))}
-            </tr>
-            <tr className="border-b border-slate-100 dark:border-slate-800">
-              {columns.map((c) => (
-                <th key={c.key} className="pb-2 pr-2">
-                  {c.filterable === false ? null : (
-                    <input
-                      value={filters[c.key] || ""}
-                      onChange={(e) =>
-                        setFilters((f) => ({ ...f, [c.key]: e.target.value }))
-                      }
-                      placeholder="Filter…"
-                      className="w-full rounded border border-slate-200 bg-white px-2 py-1 text-xs font-normal text-slate-700 outline-none focus:border-brand-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-                    />
+                  {canSort ? (
+                    <button
+                      type="button"
+                      onClick={() => toggle(col)}
+                      className={`group inline-flex items-center gap-1 uppercase tracking-wide transition-colors hover:text-slate-600 dark:hover:text-slate-300 ${
+                        col.align === "right" ? "flex-row-reverse" : ""
+                      } ${active ? "text-slate-600 dark:text-slate-300" : ""}`}
+                    >
+                      <span>{col.header}</span>
+                      <SortIcon state={state} />
+                    </button>
+                  ) : (
+                    <span>{col.header}</span>
                   )}
                 </th>
-              ))}
+              );
+            })}
+          </tr>
+          {filterable && (
+            <tr>
+              {columns.map((col) => {
+                const canFilter = col.filterable !== false && !!col.accessor;
+                return (
+                  <th key={col.key} className="px-5 pb-3">
+                    {canFilter && (
+                      <input
+                        value={filters[col.key] ?? ""}
+                        onChange={(e) =>
+                          setFilters((f) => ({ ...f, [col.key]: e.target.value }))
+                        }
+                        placeholder="Filter…"
+                        aria-label={`Filter by ${col.header}`}
+                        className="w-full rounded border border-slate-200 bg-white px-2 py-1 text-xs font-normal normal-case tracking-normal text-slate-700 outline-none focus:border-brand-400 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
+                      />
+                    )}
+                  </th>
+                );
+              })}
             </tr>
-          </thead>
-          <tbody>
-            {filtered.map((r, i) => (
-              <tr key={i} className="border-b border-slate-100 dark:border-slate-800">
-                {columns.map((c) => (
-                  <td
-                    key={c.key}
-                    className={`py-2 ${c.align === "right" ? "text-right" : ""}`}
-                  >
-                    {c.render ? c.render(r) : (c.value(r) ?? "—")}
-                  </td>
-                ))}
+          )}
+        </thead>
+        <tbody>
+          {sortedRows.length === 0 ? (
+            <tr>
+              <td
+                colSpan={columns.length}
+                className="px-5 py-6 text-center text-slate-400"
+              >
+                {emptyMessage}
+              </td>
+            </tr>
+          ) : (
+            sortedRows.map((row, i) => (
+              <tr
+                key={getRowKey(row, i)}
+                className={`border-t border-slate-100 dark:border-slate-700 ${
+                  rowClassName?.(row) ?? ""
+                }`}
+              >
+                {columns.map((col, j) => {
+                  const numeric = col.type === "number" || col.type === "date";
+                  const base =
+                    j === 0
+                      ? "font-medium text-slate-800 dark:text-slate-100"
+                      : "text-slate-600 dark:text-slate-300";
+                  return (
+                    <td
+                      key={col.key}
+                      className={`px-5 py-3 ${base} ${numeric ? "tabular-nums" : ""} ${alignClass(
+                        col.align,
+                      )} ${col.className ?? ""}`}
+                    >
+                      {col.render ? col.render(row) : defaultDisplay(col.accessor?.(row))}
+                    </td>
+                  );
+                })}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {filtered.length === 0 && (
-        <div className="py-6 text-center text-sm text-slate-400 dark:text-slate-500">
-          {emptyMessage}
+            ))
+          )}
+        </tbody>
+      </table>
+      {filterable && rows.length > 0 && (
+        <div className="px-5 py-3 text-xs text-slate-400 dark:text-slate-500">
+          {sortedRows.length === rows.length
+            ? `${rows.length.toLocaleString()} rows`
+            : `${sortedRows.length.toLocaleString()} of ${rows.length.toLocaleString()} rows`}
         </div>
       )}
-      <div className="mt-3 text-xs text-slate-400 dark:text-slate-500">
-        {filtered.length} of {rows.length} rows
-      </div>
     </div>
+  );
+}
+
+function SortIcon({ state }: { state: "asc" | "desc" | "none" }) {
+  const activeCls = "text-brand-600 dark:text-brand-400";
+  const idleCls = "text-slate-300 dark:text-slate-600";
+  return (
+    <span className="inline-flex flex-col text-[8px] leading-[8px]">
+      <span className={state === "asc" ? activeCls : idleCls}>▲</span>
+      <span className={state === "desc" ? activeCls : idleCls}>▼</span>
+    </span>
   );
 }

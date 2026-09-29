@@ -12,7 +12,8 @@ import {
 } from "recharts";
 import { api } from "../api/client";
 import type { CostByGroup, CostTrend } from "../api/types";
-import { Card, Empty } from "../components/Card";
+import ChartCard from "../components/ChartCard";
+import Empty from "../components/Empty";
 import { fmtMoney } from "../lib/format";
 
 export default function ConsumptionPage() {
@@ -49,7 +50,7 @@ export default function ConsumptionPage() {
       )}
 
       {trend.length > 0 && (
-        <Card title="Daily Azure cost (30 days)">
+        <ChartCard title="Daily Azure cost (30 days)">
           <ResponsiveContainer width="100%" height={260}>
             <LineChart data={trend}>
               <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" />
@@ -65,11 +66,11 @@ export default function ConsumptionPage() {
               />
             </LineChart>
           </ResponsiveContainer>
-        </Card>
+        </ChartCard>
       )}
 
       {byGroup.length > 0 && (
-        <Card title="Cost by resource group → chargeback">
+        <ChartCard title="Cost by resource group → chargeback">
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={byGroup} layout="vertical" margin={{ left: 40 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" />
@@ -108,7 +109,7 @@ export default function ConsumptionPage() {
             Unmapped resource groups appear in the Chargeback admin page — map them to a
             cost centre there.
           </p>
-        </Card>
+        </ChartCard>
       )}
     </div>
   );

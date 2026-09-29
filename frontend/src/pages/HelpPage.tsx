@@ -1,4 +1,4 @@
-import { Card } from "../components/Card";
+import ChartCard from "../components/ChartCard";
 
 export default function HelpPage() {
   return (
@@ -10,7 +10,7 @@ export default function HelpPage() {
         </p>
       </div>
 
-      <Card title="1. App registration (automated collectors)">
+      <ChartCard title="1. App registration (automated collectors)">
         <p className="mb-3 text-sm text-slate-600 dark:text-slate-300">
           One Entra app registration powers all three automated collectors: Purview
           audit (Cowork events), directory users, and Azure cost.
@@ -42,9 +42,9 @@ export default function HelpPage() {
           The legacy <code>AuditLog.Read.All</code> silently returns zero Copilot records
           — make sure you grant the <em>Query</em> permission above.
         </div>
-      </Card>
+      </ChartCard>
 
-      <Card title="2. Azure Cost Management (spend by resource group)">
+      <ChartCard title="2. Azure Cost Management (spend by resource group)">
         <p className="mb-3 text-sm text-slate-600 dark:text-slate-300">
           Copilot pay-as-you-go spend lands on Azure resource groups (one per billing
           policy). This connects to the Cost Management Query API to pull daily cost.
@@ -77,9 +77,9 @@ export default function HelpPage() {
           moving until the invoice closes. “Near-real-time” means yesterday’s costs by
           mid-morning, not live spend.
         </div>
-      </Card>
+      </ChartCard>
 
-      <Card title="3. Cowork usage report CSV (tasks &amp; adoption)">
+      <ChartCard title="3. Cowork usage report CSV (tasks &amp; adoption)">
         <p className="mb-3 text-sm text-slate-600 dark:text-slate-300">
           There is no API for Cowork task metrics — export the CSV and upload it on the{" "}
           <strong>Upload CSV</strong> page.
@@ -103,9 +103,9 @@ export default function HelpPage() {
             report period (7/28/90/180) matching the window you exported, and upload.
           </li>
         </ol>
-      </Card>
+      </ChartCard>
 
-      <Card title="4. Copilot Credits / Cost Management CSV (credit consumption)">
+      <ChartCard title="4. Copilot Credits / Cost Management CSV (credit consumption)">
         <p className="mb-3 text-sm text-slate-600 dark:text-slate-300">
           Credit consumption also has no API — export it and upload on the{" "}
           <strong>Upload CSV</strong> page.
@@ -135,9 +135,9 @@ export default function HelpPage() {
           Entra fields — an admin must populate department / a custom attribute for the
           org rollups to show.
         </div>
-      </Card>
+      </ChartCard>
 
-      <Card title="Privacy framing">
+      <ChartCard title="Privacy framing">
         <p className="text-sm text-slate-600 dark:text-slate-300">
           Present per-user figures as <strong>adoption and enablement</strong> (where is
           training needed, which teams haven’t started), not individual performance. If
@@ -145,7 +145,7 @@ export default function HelpPage() {
           exported UPNs are hashed — decide that tenant-wide before relying on user-level
           detail.
         </p>
-      </Card>
+      </ChartCard>
     </div>
   );
 }

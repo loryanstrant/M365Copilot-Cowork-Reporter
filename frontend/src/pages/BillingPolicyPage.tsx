@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { BillingPolicy } from "../api/types";
-import { Card, Empty } from "../components/Card";
+import ChartCard from "../components/ChartCard";
+import Empty from "../components/Empty";
 
 const EMPTY: BillingPolicy = {
   resource_group: "",
@@ -57,7 +58,7 @@ export default function BillingPolicyPage() {
         </p>
       </div>
 
-      <Card title={draft.resource_group ? `Edit: ${draft.resource_group}` : "Add mapping"}>
+      <ChartCard title={draft.resource_group ? `Edit: ${draft.resource_group}` : "Add mapping"}>
         <div className="grid gap-4 md:grid-cols-3">
           <div>
             <label className="mb-1 block text-sm text-slate-600 dark:text-slate-300">Resource group</label>
@@ -122,9 +123,9 @@ export default function BillingPolicyPage() {
           )}
         </div>
         {msg && <div className="mt-2 text-sm text-slate-500 dark:text-slate-400">{msg}</div>}
-      </Card>
+      </ChartCard>
 
-      <Card title="Mappings">
+      <ChartCard title="Mappings">
         {rows.length === 0 ? (
           <Empty message="No mappings yet." />
         ) : (
@@ -166,7 +167,7 @@ export default function BillingPolicyPage() {
             </tbody>
           </table>
         )}
-      </Card>
+      </ChartCard>
     </div>
   );
 }

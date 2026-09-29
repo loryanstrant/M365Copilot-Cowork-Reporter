@@ -3,7 +3,9 @@ import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import type { MyComparison, MyEvent, MySummary } from "../api/types";
-import { Card, Kpi, Empty } from "../components/Card";
+import ChartCard from "../components/ChartCard";
+import KpiCard from "../components/KpiCard";
+import Empty from "../components/Empty";
 import { fmtDate, fmtNumber } from "../lib/format";
 
 /**
@@ -64,7 +66,7 @@ export default function PersonalPage() {
       {err && <Empty message={err} />}
 
       {!hasData && !err ? (
-        <Card title="Your activity">
+        <ChartCard title="Your activity">
           <div className="py-10 text-center">
             <h2 className="mb-2 text-lg font-semibold text-slate-800 dark:text-slate-100">
               Nothing to show yet
@@ -75,11 +77,11 @@ export default function PersonalPage() {
               export hasn't been uploaded yet.
             </p>
           </div>
-        </Card>
+        </ChartCard>
       ) : (
         <>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-            <Kpi
+            <KpiCard
               label="Your Cowork tasks"
               value={fmtNumber(summary?.total_tasks ?? 0)}
               hint={
@@ -88,7 +90,7 @@ export default function PersonalPage() {
                   : "Latest usage snapshot"
               }
             />
-            <Kpi
+            <KpiCard
               label="Active days"
               value={fmtNumber(summary?.active_days ?? 0)}
               hint={
@@ -97,12 +99,12 @@ export default function PersonalPage() {
                   : undefined
               }
             />
-            <Kpi
+            <KpiCard
               label="Your sessions"
               value={fmtNumber(summary?.cowork_events ?? 0)}
               hint="Purview audit events"
             />
-            <Kpi
+            <KpiCard
               label="Credits consumed"
               value={fmtNumber(summary?.credits_consumed ?? 0)}
               hint="Latest admin CSV snapshot"
@@ -110,7 +112,7 @@ export default function PersonalPage() {
           </div>
 
           {comparison && comparison.people_counted > 0 && (
-            <Card title="How you compare">
+            <ChartCard title="How you compare">
               <p className="text-sm text-slate-600 dark:text-slate-300">
                 You ran {fmtNumber(comparison.my_tasks)} tasks against an organisation
                 median of {fmtNumber(comparison.org_median_tasks)} across{" "}
@@ -122,10 +124,10 @@ export default function PersonalPage() {
               <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
                 Only the median is shown — never another individual's figures.
               </p>
-            </Card>
+            </ChartCard>
           )}
 
-          <Card title="Your recent Cowork sessions">
+          <ChartCard title="Your recent Cowork sessions">
             {events.length === 0 ? (
               <Empty message="No audit events recorded for your account yet." />
             ) : (
@@ -169,7 +171,7 @@ export default function PersonalPage() {
                 </tbody>
               </table>
             )}
-          </Card>
+          </ChartCard>
         </>
       )}
     </div>
@@ -183,7 +185,7 @@ export default function PersonalPage() {
  */
 function OrgViewBanner({ canViewOrg }: { canViewOrg: boolean }) {
   return (
-    <Card>
+    <div className="card p-5">
       <div className="flex flex-wrap items-center justify-between gap-4">
         {canViewOrg ? (
           <>
@@ -216,6 +218,6 @@ function OrgViewBanner({ canViewOrg }: { canViewOrg: boolean }) {
           </>
         )}
       </div>
-    </Card>
+    </div>
   );
 }

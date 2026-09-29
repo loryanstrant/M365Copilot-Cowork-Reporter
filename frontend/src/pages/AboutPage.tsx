@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
-import { Card, Kpi } from "../components/Card";
+import ChartCard from "../components/ChartCard";
+import KpiCard from "../components/KpiCard";
 import SuiteBlock from "../components/SuiteBlock";
 
 interface AboutMeta {
@@ -78,7 +79,7 @@ export default function AboutPage() {
         </p>
       </div>
 
-      <Card title="What this is">
+      <ChartCard title="What this is">
         <p className="text-sm text-slate-600 dark:text-slate-300">
           Microsoft 365 Copilot Cowork has no single reporting API. This app is a{" "}
           <strong>collector</strong> that joins the available sources into one durable
@@ -94,16 +95,32 @@ export default function AboutPage() {
             · {buildStamp(meta.build_date, meta.build_time)}
           </p>
         )}
-      </Card>
+      </ChartCard>
 
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi label="Cowork events" value={String(fresh?.cowork_events ?? "—")} />
-        <Kpi label="Usage rows" value={String(fresh?.cowork_usage_rows ?? "—")} />
-        <Kpi label="Cost rows" value={String(fresh?.daily_cost_rows ?? "—")} />
-        <Kpi label="Directory users" value={String(fresh?.directory_users ?? "—")} />
+        <KpiCard
+          label="Cowork events"
+          value={String(fresh?.cowork_events ?? "—")}
+          hint="Purview audit rows collected"
+        />
+        <KpiCard
+          label="Usage rows"
+          value={String(fresh?.cowork_usage_rows ?? "—")}
+          hint="From uploaded admin-centre CSVs"
+        />
+        <KpiCard
+          label="Cost rows"
+          value={String(fresh?.daily_cost_rows ?? "—")}
+          hint="Daily Azure spend by resource group"
+        />
+        <KpiCard
+          label="Directory users"
+          value={String(fresh?.directory_users ?? "—")}
+          hint="Imported from Microsoft Graph"
+        />
       </div>
 
-      <Card title="Data freshness">
+      <ChartCard title="Data freshness">
         <dl className="grid gap-3 text-sm sm:grid-cols-2">
           <Row label="Earliest audit event" value={fmtDay(fresh?.earliest_event ?? null)} />
           <Row label="Most recent audit event" value={fmtDay(fresh?.latest_event ?? null)} />
@@ -115,9 +132,9 @@ export default function AboutPage() {
           />
           <Row label="Run status" value={fresh?.last_run?.status ?? "No run yet"} />
         </dl>
-      </Card>
+      </ChartCard>
 
-      <Card title="Data sources">
+      <ChartCard title="Data sources">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-200 text-left text-slate-500 dark:border-slate-700 dark:text-slate-400">
@@ -138,9 +155,9 @@ export default function AboutPage() {
           The two CSV sources have no Microsoft API. If Microsoft ships one later, the
           collector gains a loader and nothing downstream changes.
         </p>
-      </Card>
+      </ChartCard>
 
-      <Card title="Methodology">
+      <ChartCard title="Methodology">
         <ul className="list-inside list-disc space-y-2 text-sm text-slate-600 dark:text-slate-300">
           <li>
             <span className="font-medium">Consumption</span> is Azure spend plus Copilot
@@ -161,11 +178,11 @@ export default function AboutPage() {
             rolling window rather than trusting the first figure it sees.
           </li>
         </ul>
-      </Card>
+      </ChartCard>
 
       <SuiteBlock />
 
-      <Card>
+      <div className="card p-5">
         <div className="flex items-center gap-4">
           <img
             src="/loryan-cyborg.png"
@@ -199,7 +216,7 @@ export default function AboutPage() {
             </div>
           </div>
         </div>
-      </Card>
+      </div>
 
       <div className="text-xs text-slate-400 dark:text-slate-500">
         MIT-licensed. Community project — no Microsoft support agreement or SLA. The

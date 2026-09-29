@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { DirectoryUser } from "../api/types";
-import { Card, Empty } from "../components/Card";
+import ChartCard from "../components/ChartCard";
+import Empty from "../components/Empty";
 import DataTable, { type Column } from "../components/DataTable";
 
 export default function UsersPage() {
@@ -16,16 +17,16 @@ export default function UsersPage() {
   }, []);
 
   const columns: Column<DirectoryUser>[] = [
-    { key: "name", header: "Name", value: (r) => r.display_name },
-    { key: "upn", header: "UPN", value: (r) => r.user_principal_name },
-    { key: "job_title", header: "Job title", value: (r) => r.job_title },
-    { key: "department", header: "Department", value: (r) => r.department },
-    { key: "company", header: "Company", value: (r) => r.company_name },
-    { key: "office", header: "Office", value: (r) => r.office_location },
-    { key: "city", header: "City", value: (r) => r.city },
-    { key: "country", header: "Country", value: (r) => r.country },
-    { key: "manager", header: "Manager", value: (r) => r.manager_name },
-    { key: "type", header: "Type", value: (r) => r.user_type },
+    { key: "name", header: "Name", accessor: (r) => r.display_name },
+    { key: "upn", header: "UPN", accessor: (r) => r.user_principal_name },
+    { key: "job_title", header: "Job title", accessor: (r) => r.job_title },
+    { key: "department", header: "Department", accessor: (r) => r.department },
+    { key: "company", header: "Company", accessor: (r) => r.company_name },
+    { key: "office", header: "Office", accessor: (r) => r.office_location },
+    { key: "city", header: "City", accessor: (r) => r.city },
+    { key: "country", header: "Country", accessor: (r) => r.country },
+    { key: "manager", header: "Manager", accessor: (r) => r.manager_name },
+    { key: "type", header: "Type", accessor: (r) => r.user_type },
   ];
 
   return (
@@ -43,9 +44,15 @@ export default function UsersPage() {
       {loaded && users.length === 0 ? (
         <Empty message="No users imported yet. Configure the app registration in Settings and run the collectors." />
       ) : (
-        <Card title={`${users.length} users`}>
-          <DataTable columns={columns} rows={users} initialSortKey="name" initialSortDir="asc" />
-        </Card>
+        <ChartCard title={`${users.length} users`}>
+          <DataTable
+            columns={columns}
+            rows={users}
+            getRowKey={(r, i) => r.user_principal_name ?? i}
+            initialSort={{ key: "name", dir: "asc" }}
+            filterable
+          />
+        </ChartCard>
       )}
     </div>
   );

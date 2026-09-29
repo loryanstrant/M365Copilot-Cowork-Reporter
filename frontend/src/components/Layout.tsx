@@ -2,6 +2,7 @@ import { NavLink } from "react-router-dom";
 import type { ReactNode } from "react";
 import { useAuth } from "../auth/AuthContext";
 import { useTheme } from "../theme/ThemeContext";
+import SvgDefs from "./SvgDefs";
 
 // Sidebar sections: "You" is the personal view, "Organisation" is everything
 // tenant-wide and only appears for people allowed to see it.
@@ -95,9 +96,12 @@ export default function Layout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex h-full">
+      {/* Chart gradients + filters, rendered once. SVG paint references resolve
+          document-wide, so every Recharts surface can use them. */}
+      <SvgDefs />
       <aside className="flex w-60 shrink-0 flex-col border-r border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
         <div className="flex items-center gap-3 px-5 py-5">
-          <img src="/app-logo.png" alt="Copilot Cowork" className="h-8 w-8 shrink-0" />
+          <img src="/app-logo.png" alt="Copilot Cowork" className="h-9 w-9 shrink-0 rounded-lg object-contain" />
           <div>
             <div className="text-sm font-semibold text-brand-600 dark:text-brand-500">
               M365 Copilot

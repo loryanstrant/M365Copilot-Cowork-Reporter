@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { upload } from "../api/client";
 import type { UploadResult } from "../api/types";
-import { Card } from "../components/Card";
+import ChartCard from "../components/ChartCard";
 
 export default function UploadPage() {
   return (
@@ -91,7 +91,7 @@ function UploadCard({
   const field = "input";
 
   return (
-    <Card title={title}>
+    <ChartCard title={title}>
       <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">{description}</p>
       <div className="grid gap-4 md:grid-cols-2">
         <div>
@@ -144,6 +144,6 @@ function UploadCard({
       {err && (
         <div className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{err}</div>
       )}
-    </Card>
+    </ChartCard>
   );
 }
