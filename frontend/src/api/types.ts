@@ -174,3 +174,71 @@ export interface UploadResult {
   skipped: number;
   detail: string | null;
 }
+
+export interface MyActivity {
+  display_name: string | null;
+  user_principal_name: string | null;
+  days: number;
+  sessions: number;
+  tools: number;
+  files: number;
+  active_days: number;
+  last_activity_date: string | null;
+  has_data: boolean;
+}
+
+export interface MyDay {
+  day: string;
+  sessions: number;
+  tools: number;
+  files: number;
+}
+
+export interface MyTopItem {
+  name: string | null;
+  value: number;
+}
+
+export interface PeerStat {
+  label: string;
+  mine: number;
+  team_median: number;
+  org_median: number;
+  team_people: number;
+  org_people: number;
+}
+
+export interface MyStanding {
+  /** Department, or the manager's name, or null when neither is known. */
+  team_label: string | null;
+  org_percentile: number;
+  stats: PeerStat[];
+}
+
+export interface BriefingDelta {
+  label: string;
+  current: number;
+  previous: number;
+  /** Null when the previous period was zero — there is no honest percentage. */
+  change_pct: number | null;
+}
+
+export interface BriefingItem {
+  name: string | null;
+  value: number;
+  previous: number;
+}
+
+export interface Briefing {
+  window_days: number;
+  period_start: string;
+  previous_start: string;
+  has_data: boolean;
+  currency: string | null;
+  deltas: BriefingDelta[];
+  licensed_users: number;
+  active_licensed_users: number;
+  idle_licensed_users: number;
+  top_agents: BriefingItem[];
+  top_resource_groups: BriefingItem[];
+}

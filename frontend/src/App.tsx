@@ -4,6 +4,7 @@ import { useAuth } from "./auth/AuthContext";
 import { useSetupStatus } from "./hooks/useSetupStatus";
 import LoginPage from "./pages/LoginPage";
 import OverviewPage from "./pages/OverviewPage";
+import BriefingPage from "./pages/BriefingPage";
 import PersonalPage from "./pages/PersonalPage";
 import ConsumptionPage from "./pages/ConsumptionPage";
 import UsagePage from "./pages/UsagePage";
@@ -60,6 +61,7 @@ export default function App() {
         <Route path="/" element={landing} />
         <Route path="/me" element={<PersonalPage />} />
         <Route path="/overview" element={org(<OverviewPage />)} />
+        <Route path="/briefing" element={org(<BriefingPage />)} />
         <Route path="/consumption" element={org(<ConsumptionPage />)} />
         <Route path="/usage" element={org(<UsagePage />)} />
         <Route path="/users" element={org(<UsersPage />)} />

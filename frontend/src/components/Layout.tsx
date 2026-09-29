@@ -10,6 +10,7 @@ const PERSONAL_NAV = [{ to: "/me", label: "Your activity" }];
 
 const ORG_NAV = [
   { to: "/overview", label: "Overview" },
+  { to: "/briefing", label: "Executive briefing" },
   { to: "/consumption", label: "Consumption" },
   { to: "/usage", label: "Usage" },
   { to: "/users", label: "Tenant users" },
@@ -21,7 +22,12 @@ const ADMIN_NAV = [
   { to: "/settings", label: "Settings" },
 ];
 
-const HELP_NAV = [{ to: "/about", label: "About" }];
+// /help was routed but linked from nowhere, so a working page was unreachable
+// unless you knew to type the URL.
+const HELP_NAV = [
+  { to: "/help", label: "Setup guide" },
+  { to: "/about", label: "About" },
+];
 
 function navClass({ isActive }: { isActive: boolean }): string {
   return [
@@ -101,7 +107,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       <SvgDefs />
       <aside className="flex w-60 shrink-0 flex-col border-r border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
         <div className="flex items-center gap-3 px-5 py-5">
-          <img src="/app-logo.png" alt="Copilot Cowork" className="h-9 w-9 shrink-0 rounded-lg object-contain" />
+          <img src="/app-logo.png" alt="Microsoft 365 Copilot Cowork" className="h-9 w-9 shrink-0 rounded-lg object-contain" />
           <div>
             <div className="text-sm font-semibold text-brand-600 dark:text-brand-500">
               M365 Copilot
