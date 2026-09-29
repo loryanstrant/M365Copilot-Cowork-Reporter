@@ -32,17 +32,35 @@ from shared.models import (
     DirectoryUser,
 )
 
+# Departments deliberately repeat. The personal page compares you against your
+# team, and with one person per department every "team" was a team of one whose
+# median was your own figure — a comparison that looks broken because it is
+# comparing you with yourself.
 _USERS = [
     ("loryan.strant@avanoso.com", "Loryan Strant", "Modern Workplace"),
-    ("ping.lim@avanoso.com", "Ping Lim", "Engineering"),
-    ("heidi.hasting@avanoso.com", "Heidi Hasting", "Sales"),
+    ("ping.lim@avanoso.com", "Ping Lim", "Modern Workplace"),
+    ("heidi.hasting@avanoso.com", "Heidi Hasting", "Modern Workplace"),
     ("bilal.kholki@avanoso.com", "Bilal Kholki", "Finance"),
     ("kevin.silk@avanoso.com", "Kevin Silk", "Engineering"),
-    ("patrick.shortt@avanoso.com", "Patrick Shortt", "Consulting"),
+    ("patrick.shortt@avanoso.com", "Patrick Shortt", "Engineering"),
 ]
 _RGS = ["rg-copilot-cowork-prod", "rg-copilot-pilot", "rg-shared-ai"]
 _METERS = [("Copilot", "Copilot Credits"), ("Azure OpenAI", "gpt tokens")]
 _PERIODS = [7, 28, 90, 180]
+# Named agents, tools and documents, so the "top agents" and "top tools" bars
+# have something to rank. The old seeder used one agent and one tool, which
+# rendered as a single bar and demonstrated nothing.
+_AGENTS = [
+    "Researcher", "Analyst", "Facilitator", "Writer", "Scheduler", "Copilot Cowork",
+]
+_TOOLS = [
+    "file_search", "web_search", "create_document", "send_mail",
+    "summarise_thread", "schedule_meeting", "code_interpreter",
+]
+_FILES = [
+    "FY27 budget.xlsx", "Board pack.pptx", "Customer health.docx",
+    "Migration plan.docx", "Pricing model.xlsx", "Roadmap.pptx",
+]
 
 
 async def seed(reset: bool = True) -> dict[str, int]:
@@ -77,18 +95,23 @@ async def seed(reset: bool = True) -> dict[str, int]:
                 project=["Cowork Pilot", "AI Platform", "Shared"][i],
             ))
 
-        # Daily cost (rolling 30 days)
+        # Daily cost. 75 days for the same reason the events span 75: the
+        # briefing compares the last 30 days against the 30 before them, and
+        # cost confined to the recent window shows no change at all. Spend is
+        # scaled up slightly in the recent half so the comparison has a
+        # direction rather than being noise either side of a flat line.
         today = date.today()
         cost_rows = 0
-        for d in range(30):
+        for d in range(75):
             day = today - timedelta(days=d)
+            scale = 1.0 if d < 30 else 0.7
             for rg in _RGS:
                 for cat, meter in _METERS:
                     s.add(DailyCost(
                         cost_date=day, subscription_id="sub-demo-0001",
                         resource_group=rg, service_name=cat,
                         meter_category=cat, meter_name=meter,
-                        cost=round(random.uniform(2, 40), 2), currency="AUD",
+                        cost=round(random.uniform(2, 40) * scale, 2), currency="AUD",
                     ))
                     cost_rows += 1
 
@@ -126,20 +149,40 @@ async def seed(reset: bool = True) -> dict[str, int]:
                 ))
                 usage_rows += 1
 
-        # Cowork audit events
+        # Cowork audit events.
+        #
+        # Spread over 75 days on purpose. The executive briefing compares the
+        # last 30 days with the 30 before them, so demo data confined to the
+        # recent window makes every change read "new this period" and the
+        # screen cannot demonstrate what it is for.
+        #
+        # user_id is the directory user's real id. It used to be the constant
+        # "user-x", which matched nobody in dim_user, so anything joining
+        # events to the directory by object id silently found nothing.
         events = 0
-        for i in range(40):
-            u = random.choice(_USERS)
+        for i in range(420):
+            idx = random.randrange(len(_USERS))
+            upn, _name, _dept = _USERS[idx]
+            # Weight recent days more heavily, so the per-day chart has a shape
+            # rather than a flat random scatter.
+            day = min(int(abs(random.gauss(0, 26))), 74)
             when = datetime.now(timezone.utc) - timedelta(
-                hours=random.randint(1, 24 * 20)
+                days=day, hours=random.randint(0, 23), minutes=random.randint(0, 59)
             )
+            agent = random.choice(_AGENTS)
+            tools = random.sample(_TOOLS, random.randint(1, 4))
+            files = [
+                {"id": f"file-{random.randint(1, 400)}", "name": random.choice(_FILES)}
+                for _ in range(random.randint(0, 5))
+            ]
             s.add(CoworkEvent(
-                event_id=f"evt-{i}", created_at=when, user_id="user-x",
-                user_principal_name=u[0], operation="CopilotInteraction",
+                event_id=f"evt-{i}", created_at=when, user_id=f"user-{idx}",
+                user_principal_name=upn, operation="CopilotInteraction",
                 app_host="cowork", app_identity="Copilot.M365Copilot.CoworkChat",
-                agent_name="Copilot Cowork", thread_id=f"19:thread{i}@thread.v2",
-                tools=["tool_search_tool"], prompt_message_count=1,
-                response_message_count=1,
+                agent_name=agent, thread_id=f"19:thread{i}@thread.v2",
+                tools=tools, accessed_resources=files,
+                prompt_message_count=random.randint(1, 4),
+                response_message_count=random.randint(1, 4),
             ))
             events += 1
 

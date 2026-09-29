@@ -21,7 +21,9 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, or_, select
+from sqlalchemy import Integer, case, func, literal, or_, select
+from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.sql.functions import GenericFunction
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.auth import (
@@ -765,23 +767,45 @@ async def my_comparison(
 # any of it: it is a snapshot per rolling report window, not a daily series, so
 # "tasks in the last 30 days" is a number it simply does not contain.
 # --------------------------------------------------------------------------- #
-def _json_len(column):
-    """Length of a JSON array column, in whichever dialect is under us.
+class json_array_len(GenericFunction):
+    """Length of a JSON array column, spelled for whichever database is under us.
 
-    Postgres stores these as JSONB and SQLite as JSON, and the two spell the
-    length function differently. Doing this in SQL rather than pulling every
-    event into Python matters for the organisation-wide comparison, which would
-    otherwise fetch a month of the whole tenant's events to count list lengths.
+    This exists because the two dialects genuinely disagree. SQLite has
+    ``json_array_length``; Postgres has that name only for its ``json`` type
+    and calls the ``jsonb`` one ``jsonb_array_length``. These columns are JSONB
+    on Postgres, so the SQLite spelling fails there with
+
+        (psycopg.errors.UndefinedFunction)
+        function json_array_length(jsonb) does not exist
+
+    and the test suite cannot see it, because tests/conftest.py forces SQLite.
+    That is exactly how it shipped once: the personal page and the briefing both
+    returned 500 against a real Postgres while 128 tests passed. There is now a
+    test asserting the compiled SQL per dialect, which does catch it.
+
+    Doing the counting in SQL rather than in Python is deliberate: the
+    organisation-wide comparison would otherwise fetch a month of the whole
+    tenant's events just to measure list lengths.
     """
-    from sqlalchemy import case, literal_column
 
-    # Both dialects return NULL for a NULL column, which coalesces to 0.
+    type = Integer()
+    inherit_cache = True
+
+
+@compiles(json_array_len)
+def _json_array_len_default(element, compiler, **kw):
+    return "json_array_length(%s)" % compiler.process(element.clauses, **kw)
+
+
+@compiles(json_array_len, "postgresql")
+def _json_array_len_postgresql(element, compiler, **kw):
+    return "jsonb_array_length(%s)" % compiler.process(element.clauses, **kw)
+
+
+def _json_len(column):
+    """0 for NULL, else the array length. NULL columns are the common case."""
     return func.coalesce(
-        case(
-            (column.is_(None), literal_column("0")),
-            else_=func.json_array_length(column),
-        ),
-        0,
+        case((column.is_(None), literal(0)), else_=json_array_len(column)), 0
     )
 
 
