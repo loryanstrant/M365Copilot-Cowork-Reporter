@@ -251,28 +251,125 @@ async def usage_by_user(
 async def directory_users(
     session: AsyncSession = Depends(get_session),
 ) -> list[DirectoryUserOut]:
-    """Full imported tenant user listing (enabled members) for sort/filter."""
-    rows = (
-        await session.execute(
-            select(DirectoryUser).order_by(DirectoryUser.display_name)
+    """The people this report is actually about: licensed, and in the data.
+
+    A directory dump is not a useful answer here. A tenant's dim_user holds
+    every member Graph returned — most of whom have no Copilot licence and
+    appear nowhere in any Cowork report — so listing them all buries the few
+    hundred rows anyone came to look at under a few thousand they did not.
+
+    So a row must be both:
+
+    * **licensed** — has_copilot_license is true. Note this is `is True`, not
+      truthiness: NULL means "never determined" (see migration 0005) and must
+      not pass as licensed on the strength of not being False.
+    * **present in the report data** — matched in fact_cowork_usage or
+      fact_cowork_event.
+
+    People with a licence and no activity are the rows worth finding, so
+    "present in the data" deliberately does not mean "did something". A person
+    matched with zero tasks and zero sessions is exactly the row that answers
+    "who are we paying for and not getting anything from", and it is listed
+    with its zeroes rather than filtered out.
+
+    UPN casing differs between the directory and the admin-centre exports, so
+    every join is on lower(upn). Audit events carry the Entra object ID as well,
+    which the directory join uses in preference where present.
+    """
+    # Aggregate each fact stream per person first, so the outer query stays one
+    # row per user however many snapshots or events they have.
+    usage = (
+        select(
+            func.lower(CoworkUsage.user_principal_name).label("upn"),
+            func.coalesce(func.sum(CoworkUsage.total_tasks), 0).label("total_tasks"),
+            func.max(CoworkUsage.last_activity_date).label("last_activity_date"),
         )
-    ).scalars().all()
-    return [
-        DirectoryUserOut(
-            user_principal_name=u.upn,
-            display_name=u.display_name,
-            job_title=u.job_title,
-            department=u.department,
-            company_name=u.company_name,
-            office_location=u.office_location,
-            city=u.city,
-            country=u.country,
-            manager_name=u.manager_name,
-            user_type=u.user_type,
-            account_enabled=u.account_enabled,
+        .group_by(func.lower(CoworkUsage.user_principal_name))
+        .subquery()
+    )
+    events = (
+        select(
+            func.lower(CoworkEvent.user_principal_name).label("upn"),
+            func.count().label("cowork_events"),
+            func.max(CoworkEvent.created_at).label("last_event_at"),
         )
-        for u in rows
-    ]
+        .where(CoworkEvent.user_principal_name.isnot(None))
+        .group_by(func.lower(CoworkEvent.user_principal_name))
+        .subquery()
+    )
+    events_by_oid = (
+        select(
+            CoworkEvent.user_id.label("user_id"),
+            # Distinct labels from the by-UPN subquery above: both are selected
+            # into the same row, and same-named columns would collide into
+            # SQLAlchemy's positional "_1" suffixes, which is not something to
+            # read values back out of by guessing.
+            func.count().label("oid_events"),
+            func.max(CoworkEvent.created_at).label("last_oid_event_at"),
+        )
+        .where(CoworkEvent.user_id.isnot(None))
+        .group_by(CoworkEvent.user_id)
+        .subquery()
+    )
+
+    stmt = (
+        select(usage, events, events_by_oid, DirectoryUser)
+        .select_from(DirectoryUser)
+        .join(usage, usage.c.upn == func.lower(DirectoryUser.upn), isouter=True)
+        .join(events, events.c.upn == func.lower(DirectoryUser.upn), isouter=True)
+        .join(
+            events_by_oid,
+            events_by_oid.c.user_id == DirectoryUser.user_id,
+            isouter=True,
+        )
+        .where(
+            DirectoryUser.has_copilot_license.is_(True),
+            or_(
+                usage.c.upn.isnot(None),
+                events.c.upn.isnot(None),
+                events_by_oid.c.user_id.isnot(None),
+            ),
+        )
+        .order_by(DirectoryUser.display_name)
+    )
+    rows = (await session.execute(stmt)).all()
+
+    out: list[DirectoryUserOut] = []
+    for r in rows:
+        u = r.DirectoryUser
+        # A person's events may be matched by object ID, by UPN, or both. Both
+        # subqueries count the same rows when both match, so take the larger
+        # rather than the sum, which would double every such person's sessions.
+        by_upn = int(r.cowork_events or 0)
+        by_oid = int(r.oid_events or 0)
+        last_seen = max(
+            (
+                d
+                for d in (r.last_activity_date, r.last_event_at, r.last_oid_event_at)
+                if d is not None
+            ),
+            default=None,
+        )
+        out.append(
+            DirectoryUserOut(
+                user_principal_name=u.upn,
+                display_name=u.display_name,
+                job_title=u.job_title,
+                department=u.department,
+                company_name=u.company_name,
+                office_location=u.office_location,
+                city=u.city,
+                country=u.country,
+                manager_name=u.manager_name,
+                user_type=u.user_type,
+                account_enabled=u.account_enabled,
+                has_copilot_license=u.has_copilot_license,
+                cowork_events=max(by_upn, by_oid),
+                total_tasks=int(r.total_tasks or 0),
+                last_activity_date=last_seen,
+            )
+        )
+    return out
 
 
 @router.get("/usage/trend", response_model=list[UsageTrendOut])

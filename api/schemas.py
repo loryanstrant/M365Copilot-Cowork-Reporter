@@ -182,6 +182,16 @@ class DirectoryUserOut(BaseModel):
     manager_name: str | None
     user_type: str | None
     account_enabled: bool | None
+    # Holds a SKU granting Copilot, with the plan still enabled. None means
+    # never determined — a row that predates licence detection, or a tenant
+    # whose sync has not run since.
+    has_copilot_license: bool | None = None
+    # Activity found for this person in the report data, so a licence that is
+    # being paid for but not used is visible as a row with zeroes rather than
+    # as an absence.
+    cowork_events: int = 0
+    total_tasks: int = 0
+    last_activity_date: datetime | None = None
 
 
 class UsageTrendOut(BaseModel):

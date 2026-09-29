@@ -98,6 +98,11 @@ export interface DirectoryUser {
   manager_name: string | null;
   user_type: string | null;
   account_enabled: boolean | null;
+  /** Holds a Copilot-granting SKU with the plan enabled. Null = undetermined. */
+  has_copilot_license: boolean | null;
+  cowork_events: number;
+  total_tasks: number;
+  last_activity_date: string | null;
 }
 
 export interface UsageTrend {

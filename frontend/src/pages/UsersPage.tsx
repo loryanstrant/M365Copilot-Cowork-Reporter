@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
 import type { DirectoryUser } from "../api/types";
 import ChartCard from "../components/ChartCard";
 import Empty from "../components/Empty";
 import DataTable, { type Column } from "../components/DataTable";
+import { fmtDate, fmtNumber } from "../lib/format";
 
 export default function UsersPage() {
   const [users, setUsers] = useState<DirectoryUser[]>([]);
@@ -16,35 +17,86 @@ export default function UsersPage() {
     })();
   }, []);
 
-  const columns: Column<DirectoryUser>[] = [
-    { key: "name", header: "Name", accessor: (r) => r.display_name },
-    { key: "upn", header: "UPN", accessor: (r) => r.user_principal_name },
-    { key: "job_title", header: "Job title", accessor: (r) => r.job_title },
-    { key: "department", header: "Department", accessor: (r) => r.department },
-    { key: "company", header: "Company", accessor: (r) => r.company_name },
-    { key: "office", header: "Office", accessor: (r) => r.office_location },
-    { key: "city", header: "City", accessor: (r) => r.city },
-    { key: "country", header: "Country", accessor: (r) => r.country },
-    { key: "manager", header: "Manager", accessor: (r) => r.manager_name },
-    { key: "type", header: "Type", accessor: (r) => r.user_type },
-  ];
+  // Memoised because DataTable's filter and sort both key off this array —
+  // rebuilding it every render would defeat their memoisation on every
+  // keystroke in a filter box.
+  const columns: Column<DirectoryUser>[] = useMemo(
+    () => [
+      { key: "name", header: "Name", accessor: (r) => r.display_name },
+      { key: "upn", header: "UPN", accessor: (r) => r.user_principal_name },
+      { key: "job_title", header: "Job title", accessor: (r) => r.job_title },
+      { key: "department", header: "Department", accessor: (r) => r.department },
+      { key: "company", header: "Company", accessor: (r) => r.company_name },
+      { key: "office", header: "Office", accessor: (r) => r.office_location },
+      { key: "country", header: "Country", accessor: (r) => r.country },
+      { key: "manager", header: "Manager", accessor: (r) => r.manager_name },
+      {
+        key: "tasks",
+        header: "Tasks",
+        type: "number",
+        align: "right",
+        filterable: false,
+        accessor: (r) => r.total_tasks,
+        render: (r) => fmtNumber(r.total_tasks),
+      },
+      {
+        key: "sessions",
+        header: "Sessions",
+        type: "number",
+        align: "right",
+        filterable: false,
+        accessor: (r) => r.cowork_events,
+        render: (r) => fmtNumber(r.cowork_events),
+      },
+      {
+        key: "last_seen",
+        header: "Last active",
+        type: "date",
+        filterable: false,
+        accessor: (r) => r.last_activity_date,
+        render: (r) => (r.last_activity_date ? fmtDate(r.last_activity_date) : "—"),
+      },
+      {
+        key: "licensed",
+        header: "Licence",
+        accessor: (r) => (r.has_copilot_license ? "Licensed" : "Not licensed"),
+        // Shape plus word, never colour alone.
+        render: (r) => (
+          <span className="whitespace-nowrap">
+            <span aria-hidden>{r.has_copilot_license ? "●" : "○"}</span>{" "}
+            {r.has_copilot_license ? "Licensed" : "Not licensed"}
+          </span>
+        ),
+      },
+    ],
+    [],
+  );
+
+  const idle = users.filter((u) => u.total_tasks === 0 && u.cowork_events === 0).length;
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">
-          Tenant users
-        </h1>
+        <h1 className="text-2xl font-bold">Tenant users</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          Directory users imported from Microsoft Graph — the profile fields that power
-          filtering and cost-centre rollups. Click a header to sort, type to filter.
+          People who hold a Microsoft 365 Copilot licence and appear in the Cowork
+          report data. Someone with a licence and nothing against their name is
+          listed rather than hidden — that is the row worth finding. Click a header
+          to sort, type to filter.
         </p>
       </div>
 
       {loaded && users.length === 0 ? (
-        <Empty message="No users imported yet. Configure the app registration in Settings and run the collectors." />
+        <Empty message="No licensed users found in the report data yet. Configure the app registration in Settings and run the collectors, then upload a Cowork usage report." />
       ) : (
-        <ChartCard title={`${users.length} users`}>
+        <ChartCard
+          title={`${fmtNumber(users.length)} licensed users in the data`}
+          subtitle={
+            idle > 0
+              ? `${fmtNumber(idle)} hold a licence with no recorded activity`
+              : "Every licensed person here has recorded activity"
+          }
+        >
           <DataTable
             columns={columns}
             rows={users}
