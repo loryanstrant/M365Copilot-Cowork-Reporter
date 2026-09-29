@@ -20,6 +20,7 @@ from api.auth import (
     create_access_token,
     effective_role,
     get_current_user,
+    resolve_identity,
 )
 from api.oidc import (
     STATE_COOKIE,
@@ -159,11 +160,12 @@ async def me(
     user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> UserOut:
+    display_name, upn, personal = await resolve_identity(user, session)
     return UserOut(
         username=user.username,
         role=await effective_role(user, session),
-        display_name=user.display_name,
-        upn=user.upn,
+        display_name=display_name,
+        upn=upn,
         can_view_org=await can_view_org(user, session),
-        has_personal_view=user.has_personal_view,
+        has_personal_view=personal,
     )

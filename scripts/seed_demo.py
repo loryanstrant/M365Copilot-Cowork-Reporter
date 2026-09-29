@@ -5,13 +5,23 @@ plausible but fictional; user names echo the Avanoso demo tenant shape.
 """
 from __future__ import annotations
 
+import argparse
 import asyncio
 import random
+import sys
+from pathlib import Path
 from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy import delete
 
+# Running this as a script ("python scripts/seed_demo.py") puts scripts/ on
+# sys.path, not the repo root, so the app's own packages are not importable.
+# Add the root explicitly rather than requiring the reader to know to type
+# "python -m scripts.seed_demo" — the README tells them the plain form.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from shared.db import SessionLocal
+from shared.demo import bind_demo_persona, retire_demo_persona
 from shared.migrate import upgrade_to_head
 from shared.models import (
     BillingPolicy,
@@ -36,7 +46,12 @@ _PERIODS = [7, 28, 90, 180]
 
 
 async def seed(reset: bool = True) -> dict[str, int]:
-    upgrade_to_head()
+    # No upgrade_to_head() here. Alembic is synchronous, and this coroutine is
+    # awaited straight from the Load demo data endpoint on the API's event
+    # loop, so running a full migration chain inside it blocks every other
+    # request for its duration. The API and worker already migrate on startup,
+    # and the CLI below migrates before it starts the loop, so by the time
+    # anything calls this the schema is at head.
     async with SessionLocal() as s:
         if reset:
             for model in (
@@ -50,6 +65,9 @@ async def seed(reset: bool = True) -> dict[str, int]:
             s.add(DirectoryUser(
                 user_id=f"user-{i}", upn=upn, email=upn, display_name=name,
                 department=dept, account_enabled=True, user_type="Member",
+                # Without this the Tenant users page is empty on demo data:
+                # it lists only people who are licensed AND in the report data.
+                has_copilot_license=True,
             ))
         for i, rg in enumerate(_RGS):
             s.add(BillingPolicy(
@@ -125,15 +143,17 @@ async def seed(reset: bool = True) -> dict[str, int]:
             ))
             events += 1
 
+        # Bind the local admin to the first seeded user, so the personal pages
+        # are reachable without Entra. See shared/demo.py for why.
+        upn, name, _dept = _USERS[0]
+        await bind_demo_persona(s, user_id="user-0", upn=upn, display_name=name)
         await s.commit()
     return {
         "cost_rows": cost_rows, "credit_rows": credit_rows,
         "usage_rows": usage_rows, "events": events,
+        "persona": _USERS[0][0],
     }
 
-
-if __name__ == "__main__":
-    print(asyncio.run(seed()))
 
 
 async def clear() -> dict[str, int]:
@@ -148,5 +168,53 @@ async def clear() -> dict[str, int]:
             DirectoryUser, BillingPolicy,
         ):
             await s.execute(delete(model))
+        # The persona points at a directory row that has just been deleted, so
+        # it has to go with it or the personal view resolves to nothing.
+        await retire_demo_persona(s)
         await s.commit()
     return {"cleared": 1}
+
+
+def main() -> int:
+    """Command-line entry point, matching the other three solutions."""
+    parser = argparse.ArgumentParser(description="Seed or clear Cowork demo data.")
+    parser.add_argument(
+        "--reset",
+        action="store_true",
+        help="Clear existing demo rows before seeding (default).",
+    )
+    parser.add_argument(
+        "--keep",
+        action="store_true",
+        help="Seed without clearing first, adding to what is already there.",
+    )
+    parser.add_argument(
+        "--clear", action="store_true", help="Clear demo data and exit."
+    )
+    args = parser.parse_args()
+
+    # psycopg async needs a SelectorEventLoop on Windows (no-op elsewhere).
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+    # Only the CLI migrates. The API and worker already do it on startup, and
+    # Alembic is synchronous so it must never be called from inside a running
+    # event loop — which is what the seed endpoint was doing through seed().
+    upgrade_to_head()
+
+    if args.clear:
+        asyncio.run(clear())
+        print("Demo data cleared.")
+        return 0
+
+    stats = asyncio.run(seed(reset=not args.keep))
+    print(
+        f"Seeded {stats['cost_rows']} cost rows, {stats['events']} events, "
+        f"{stats['usage_rows']} usage rows, {stats['credit_rows']} credit rows. "
+        f"Personal view bound to {stats['persona']}."
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

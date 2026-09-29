@@ -475,8 +475,18 @@ async def get_freshness(session: AsyncSession = Depends(get_session)) -> dict:
 async def _me_identity(
     user: CurrentUser, session: AsyncSession
 ) -> tuple[str | None, str | None]:
-    """Resolve the signed-in person to (object ID, UPN), or 404."""
+    """Resolve the signed-in person to (object ID, UPN), or 404.
+
+    Falls back to the demo persona for an account with no Entra identity, so
+    the personal pages work on demo data without Entra configured. The persona
+    only exists while demo data is loaded, and a real ingest deletes it.
+    """
     if not user.has_personal_view:
+        from shared.demo import get_demo_persona
+
+        persona = await get_demo_persona(session)
+        if persona:
+            return persona.get("user_id"), persona.get("upn")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=(

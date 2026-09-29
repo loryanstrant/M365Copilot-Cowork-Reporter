@@ -32,6 +32,7 @@ from shared.models import (
     IngestState,
     JobRun,
 )
+from shared.demo import retire_demo_persona
 from shared.upsert import bulk_upsert
 from worker.graph import ApiClient, AppAuth, GraphError
 from worker.licensing import copilot_granting_skus
@@ -240,6 +241,13 @@ async def run_ingest(
             await session.commit()
             stats["audit"] = await collect_cowork_events(session, client, config, now)
             await session.commit()
+            # Real data has arrived, so a demo persona the local admin was
+            # borrowing is now actively misleading — it would go on presenting
+            # a fictional person's activity as their own. Retire it here rather
+            # than relying on someone remembering to press Clear demo data;
+            # real data landing is a better signal than a button nobody has to
+            # press.
+            await retire_demo_persona(session)
             job.status = "success"
             job.finished_at = datetime.now(timezone.utc)
             job.stats = stats
