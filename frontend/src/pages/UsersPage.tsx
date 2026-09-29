@@ -24,17 +24,23 @@ export default function UsersPage() {
     () => [
       { key: "name", header: "Name", accessor: (r) => r.display_name },
       { key: "upn", header: "UPN", accessor: (r) => r.user_principal_name },
-      { key: "job_title", header: "Job title", accessor: (r) => r.job_title },
       { key: "department", header: "Department", accessor: (r) => r.department },
-      // Company and Office are deliberately not shown, and the choice was
-      // measured rather than guessed. At a 1600px window the card gives the
-      // table 1254px; with both present it wanted 1380 and the Licence column
-      // fell off the right edge. Company is the same string on every row in a
-      // single-tenant directory, so it is width spent on nothing; Office is
-      // geography that Department and Country already cover for this page's
-      // purpose. Without them the table measures 1138px and has room to
-      // spare. Both fields are still returned by the API.
-      { key: "country", header: "Country", accessor: (r) => r.country },
+      // Four directory fields are deliberately not shown, and the choice was
+      // measured in the running app rather than guessed. At a 1440px window —
+      // an ordinary laptop, and the width worth designing for — the card gives
+      // this table 1094px. With Company, Office, Job title and Country present
+      // it wanted 1210px and the Licence column, which is the one people come
+      // here for, was pushed off the right edge.
+      //
+      // What survives is what answers the page's question, "who holds a licence
+      // and is not using it": who they are, who manages them, and what they
+      // have done. Company is the same string on every row in a single-tenant
+      // directory; Office and Country are geography that Department covers well
+      // enough here; Job title says less than Department for this purpose. All
+      // four are still returned by the API.
+      //
+      // Measured after trimming, in the running app at 1440px: the table no
+      // longer overflows its container at all.
       { key: "manager", header: "Manager", accessor: (r) => r.manager_name },
       {
         key: "tasks",

@@ -14,7 +14,7 @@ import { api } from "../api/client";
 import type { CostByGroup, CostTrend } from "../api/types";
 import ChartCard from "../components/ChartCard";
 import Empty from "../components/Empty";
-import { fmtMoney } from "../lib/format";
+import { fmtDayShort, fmtMoney } from "../lib/format";
 import ChartTooltip from "../components/ChartTooltip";
 import { CHART_COLORS } from "../components/chartTheme";
 
@@ -56,7 +56,12 @@ export default function ConsumptionPage() {
           <ResponsiveContainer width="100%" height={260}>
             <LineChart data={trend}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-700" />
-              <XAxis dataKey="cost_date" tick={{ fontSize: 11 }} />
+              <XAxis
+                dataKey="cost_date"
+                tick={{ fontSize: 11 }}
+                tickFormatter={(d: string) => fmtDayShort(d)}
+                minTickGap={28}
+              />
               <YAxis tick={{ fontSize: 11 }} />
               <Tooltip content={<ChartTooltip formatValue={(v) => fmtMoney(v, currency)} />} />
               <Line

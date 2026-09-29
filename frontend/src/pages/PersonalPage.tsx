@@ -24,7 +24,7 @@ import ChartTooltip from "../components/ChartTooltip";
 import Empty from "../components/Empty";
 import KpiCard from "../components/KpiCard";
 import { CHART_COLORS, barGradId } from "../components/chartTheme";
-import { fmtDate, fmtNumber } from "../lib/format";
+import { fmtDate, fmtDayShort, fmtNumber } from "../lib/format";
 
 const DAYS = 30;
 
@@ -164,7 +164,7 @@ export default function PersonalPage() {
                 <XAxis
                   dataKey="day"
                   tick={{ fontSize: 11 }}
-                  tickFormatter={(d: string) => fmtDate(d)}
+                  tickFormatter={(d: string) => fmtDayShort(d)}
                   minTickGap={28}
                 />
                 <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />

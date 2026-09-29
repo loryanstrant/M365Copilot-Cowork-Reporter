@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import ChartCard from "../components/ChartCard";
+import { fmtDate } from "../lib/format";
 import KpiCard from "../components/KpiCard";
 import SuiteBlock from "../components/SuiteBlock";
 
@@ -37,11 +38,11 @@ interface Freshness {
   last_run: { status: string; started_at: string | null; finished_at: string | null } | null;
 }
 
+// Defers to the shared formatter, which spells the month. An all-numeric date
+// on a page whose whole job is telling you how fresh the data is would be an
+// odd place to leave 7/16/2026 open to interpretation.
 function fmtDay(value: string | null): string {
-  if (!value) return "—";
-  const t = Date.parse(value);
-  if (Number.isNaN(t)) return value;
-  return new Date(t).toLocaleDateString();
+  return fmtDate(value);
 }
 
 function fmtDateTime(value: string | null): string {
