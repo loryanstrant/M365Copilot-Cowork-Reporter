@@ -20,14 +20,24 @@ import shared.models  # noqa: F401
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)
 
-if config.config_file_name is not None:
-    # disable_existing_loggers=False matters when this runs in-process on API
-    # startup rather than from the alembic CLI. The default (True) switches off
-    # every logger configured before it — including uvicorn's — so the app goes
-    # silent from "Running database migrations" onwards: no "Application
-    # startup complete", no access logs, nothing. It reads exactly like a hang
-    # at startup, and it cost a verification session an hour chasing one.
-    fileConfig(config.config_file_name, disable_existing_loggers=False)
+# Only configure logging when Alembic is driving — i.e. from the CLI, where
+# nothing else has set logging up and the ini file is the only source of it.
+#
+# In-process this must not run at all. shared.migrate calls this during FastAPI
+# startup, by which point uvicorn and the app have configured logging, and
+# fileConfig would overwrite it: it replaces the root logger's handlers and
+# forces its level to alembic.ini's `logger_root level = WARNING`. The visible
+# result is an app that goes silent from "Running database migrations to
+# head..." onwards — no "Application startup complete", no access lines, and no
+# INFO from any app logger for the life of the process — while actually serving
+# fine. disable_existing_loggers=False is not enough on its own: it stops
+# existing loggers being muted, but the root reset still happens.
+#
+# shared.migrate.upgrade_to_head sets this attribute; the CLI never does.
+if config.config_file_name is not None and not config.attributes.get(
+    "in_process", False
+):
+    fileConfig(config.config_file_name)
 
 target_metadata = Base.metadata
 
