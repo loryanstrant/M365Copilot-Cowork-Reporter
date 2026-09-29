@@ -14,6 +14,8 @@ import type { UsageByUser, UsageTrend } from "../api/types";
 import ChartCard from "../components/ChartCard";
 import Empty from "../components/Empty";
 import DataTable, { type Column } from "../components/DataTable";
+import ChartTooltip from "../components/ChartTooltip";
+import { CHART_COLORS } from "../components/chartTheme";
 import { fmtDate } from "../lib/format";
 
 export default function UsagePage() {
@@ -113,17 +115,17 @@ export default function UsagePage() {
         <ChartCard title="Active users &amp; tasks by report window">
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={trend}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" />
+              <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-700" />
               <XAxis
                 dataKey="period_days"
                 tickFormatter={(v) => `${v}d`}
                 tick={{ fontSize: 11 }}
               />
               <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip />
+              <Tooltip content={<ChartTooltip />} />
               <Legend />
-              <Bar dataKey="active_users" name="Active users" fill="#2f5ae0" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="total_tasks" name="Total tasks" fill="#8fb4fe" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="active_users" name="Active users" fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} />
+              <Bar dataKey="total_tasks" name="Total tasks" fill={CHART_COLORS[1]} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>

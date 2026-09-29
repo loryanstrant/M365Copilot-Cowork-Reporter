@@ -5,12 +5,20 @@ import type { TooltipProps } from "recharts";
  * so it switches automatically between light and dark, with one consistent font,
  * size and colour (the built-in Recharts tooltip renders a fixed white box with
  * inconsistent text colours that are unreadable in dark mode).
+ *
+ * `formatValue` is optional and additive: omit it and this behaves exactly as
+ * the suite's other copies do. It exists because Cowork is the only one of the
+ * four with a money plane, and a cost chart whose tooltip reads "1234.5678"
+ * instead of "$1,234.57" is worse than the unreadable one it replaced.
  */
 export default function ChartTooltip({
   active,
   payload,
   label,
-}: TooltipProps<number | string, string>) {
+  formatValue,
+}: TooltipProps<number | string, string> & {
+  formatValue?: (value: number) => string;
+}) {
   if (!active || !payload || payload.length === 0) return null;
 
   return (
@@ -27,7 +35,9 @@ export default function ChartTooltip({
           // Bars can be filled with a gradient url(#...); use a solid dot instead.
           const dot = typeof raw === "string" && raw.startsWith("url(") ? "#3b6ef5" : raw;
           const value =
-            typeof entry.value === "number" ? entry.value.toLocaleString() : entry.value;
+            typeof entry.value === "number"
+              ? (formatValue ?? ((n: number) => n.toLocaleString()))(entry.value)
+              : entry.value;
           return (
             <div
               key={i}

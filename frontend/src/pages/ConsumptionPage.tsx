@@ -15,6 +15,8 @@ import type { CostByGroup, CostTrend } from "../api/types";
 import ChartCard from "../components/ChartCard";
 import Empty from "../components/Empty";
 import { fmtMoney } from "../lib/format";
+import ChartTooltip from "../components/ChartTooltip";
+import { CHART_COLORS } from "../components/chartTheme";
 
 export default function ConsumptionPage() {
   const [byGroup, setByGroup] = useState<CostByGroup[]>([]);
@@ -53,14 +55,14 @@ export default function ConsumptionPage() {
         <ChartCard title="Daily Azure cost (30 days)">
           <ResponsiveContainer width="100%" height={260}>
             <LineChart data={trend}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" />
+              <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-700" />
               <XAxis dataKey="cost_date" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(v: number) => fmtMoney(v, currency)} />
+              <Tooltip content={<ChartTooltip formatValue={(v) => fmtMoney(v, currency)} />} />
               <Line
                 type="monotone"
                 dataKey="cost"
-                stroke="#2f5ae0"
+                stroke={CHART_COLORS[0]}
                 strokeWidth={2}
                 dot={false}
               />
@@ -73,7 +75,7 @@ export default function ConsumptionPage() {
         <ChartCard title="Cost by resource group → chargeback">
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={byGroup} layout="vertical" margin={{ left: 40 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" />
+              <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-700" />
               <XAxis type="number" tick={{ fontSize: 11 }} />
               <YAxis
                 type="category"
@@ -81,8 +83,8 @@ export default function ConsumptionPage() {
                 width={160}
                 tick={{ fontSize: 11 }}
               />
-              <Tooltip formatter={(v: number) => fmtMoney(v, currency)} />
-              <Bar dataKey="cost" fill="#3b6ef5" radius={[0, 4, 4, 0]} />
+              <Tooltip content={<ChartTooltip formatValue={(v) => fmtMoney(v, currency)} />} />
+              <Bar dataKey="cost" fill={CHART_COLORS[0]} radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
           <table className="mt-4 w-full text-sm">
