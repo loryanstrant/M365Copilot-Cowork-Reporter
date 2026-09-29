@@ -11,66 +11,51 @@ never reach the personal pages the README advertises. The feature appears
 broken rather than gated.
 
 So loading demo data binds the local admin to one of the seeded directory
-users. The binding is a single row in ``ingest_state``, which already exists to
-hold collector bookkeeping and is cleared by the same Clear demo data button
-that removes the rows the persona points at.
+users. The binding is ``app_config.demo_persona_user_id``: a nullable column
+sitting with the rest of the configuration, rather than a row squatting in
+``ingest_state``, which is a table of collector watermarks and would hide an
+identity binding somewhere nobody reading the model would find it.
 
 Two rules keep this from leaking into production:
 
 * It is only ever written by the demo seeder. Nothing in the ingest path
   creates one.
-* A successful real ingest deletes it. Otherwise an operator who cuts over to
+* A successful real ingest clears it. Otherwise an operator who cuts over to
   live data without pressing Clear demo data keeps seeing a fictional person's
   activity presented as their own — which is worse than stale rows, because it
   is wrong about *whose* data it is.
 """
 from __future__ import annotations
 
-from typing import Any
-
-from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from shared.models import IngestState
-
-# Key of the ingest_state row holding the binding. Namespaced so it cannot
-# collide with a collector watermark.
-DEMO_PERSONA_KEY = "demo:persona"
+from shared.models import AppConfig
 
 
-async def bind_demo_persona(
-    session: AsyncSession, *, user_id: str, upn: str, display_name: str | None = None
-) -> None:
+async def bind_demo_persona(session: AsyncSession, *, user_id: str) -> None:
     """Point the local admin's personal view at a seeded directory user."""
-    row = await session.get(IngestState, DEMO_PERSONA_KEY)
-    if row is None:
-        row = IngestState(key=DEMO_PERSONA_KEY)
-        session.add(row)
-    row.last_status = "bound"
-    row.detail = {"user_id": user_id, "upn": upn, "display_name": display_name}
+    cfg = await session.get(AppConfig, 1)
+    if cfg is None:
+        cfg = AppConfig(id=1, azure_subscription_ids=[])
+        session.add(cfg)
+    cfg.demo_persona_user_id = user_id
 
 
-async def get_demo_persona(session: AsyncSession) -> dict[str, Any] | None:
-    """The bound persona, or None when there isn't one."""
-    row = await session.scalar(
-        select(IngestState).where(IngestState.key == DEMO_PERSONA_KEY)
-    )
-    if row is None or not row.detail:
-        return None
-    detail = dict(row.detail)
-    return detail if detail.get("user_id") or detail.get("upn") else None
+async def get_demo_persona_user_id(session: AsyncSession) -> str | None:
+    """The bound directory user id, or None when nothing is bound."""
+    cfg = await session.get(AppConfig, 1)
+    return (cfg.demo_persona_user_id if cfg else None) or None
 
 
 async def retire_demo_persona(session: AsyncSession) -> None:
     """Drop the binding. Called by Clear demo data and by a real ingest."""
-    await session.execute(
-        delete(IngestState).where(IngestState.key == DEMO_PERSONA_KEY)
-    )
+    cfg = await session.get(AppConfig, 1)
+    if cfg is not None:
+        cfg.demo_persona_user_id = None
 
 
 __all__ = [
-    "DEMO_PERSONA_KEY",
     "bind_demo_persona",
-    "get_demo_persona",
+    "get_demo_persona_user_id",
     "retire_demo_persona",
 ]

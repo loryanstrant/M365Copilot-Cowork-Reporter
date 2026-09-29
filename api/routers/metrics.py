@@ -24,7 +24,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.auth import CurrentUser, get_current_user, require_org_view
+from api.auth import (
+    CurrentUser,
+    get_current_user,
+    personal_view_user_id,
+    require_org_view,
+)
 from api.schemas import (
     CostByGroupOut,
     CostTrendOut,
@@ -481,12 +486,8 @@ async def _me_identity(
     the personal pages work on demo data without Entra configured. The persona
     only exists while demo data is loaded, and a real ingest deletes it.
     """
-    if not user.has_personal_view:
-        from shared.demo import get_demo_persona
-
-        persona = await get_demo_persona(session)
-        if persona:
-            return persona.get("user_id"), persona.get("upn")
+    oid = await personal_view_user_id(user, session)
+    if oid is None and not user.upn:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=(
@@ -494,7 +495,7 @@ async def _me_identity(
                 "work account to see your own activity."
             ),
         )
-    oid, upn = user.oid, user.upn
+    upn = user.upn
     if oid and not upn:
         directory = await session.get(DirectoryUser, oid)
         upn = directory.upn if directory else None

@@ -79,8 +79,10 @@ run. Nothing is ever seeded or wiped automatically.
 ### Enabling Entra ID single sign-on (optional)
 
 By default the dashboard is protected by the single admin password. You can additionally let
-colleagues sign in with their **work account** (read-only viewer role) — administration stays
-behind the password.
+colleagues sign in with their **work account**. They sign in as viewers unless they are members
+of the **admin security group** you nominate in Settings, whose members get administrator rights
+without the password being shared around. Leave that field blank and nobody gets admin via
+single sign-on — it fails closed, and the local admin account remains the way in.
 
 Sign-in is performed by the app itself, so it works the same wherever you run it: Azure, Docker
 on a NAS, Kubernetes, anywhere. There is nothing to configure on the hosting platform.

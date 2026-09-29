@@ -299,6 +299,11 @@ class AppConfig(Base):
     # unlike the org view, administration fails closed. Stored in the clear
     # rather than encrypted — a group object ID is an identifier, not a secret.
     admin_group_id: Mapped[str | None] = mapped_column(Text)
+    # While demo data is loaded, the local password admin stands in for this
+    # seeded directory user so the personal pages can be reached without Entra.
+    # Written only by the demo seeder; cleared by Clear demo data and by a
+    # successful real ingest. See shared/demo.py.
+    demo_persona_user_id: Mapped[str | None] = mapped_column(Text)
     # Recurring ingest cadence (hours). Cost refreshes every 4h; 6-8h recommended.
     schedule_interval_hours: Mapped[int] = mapped_column(Integer, default=8)
     updated_at: Mapped[datetime] = mapped_column(

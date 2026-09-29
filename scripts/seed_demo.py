@@ -145,8 +145,7 @@ async def seed(reset: bool = True) -> dict[str, int]:
 
         # Bind the local admin to the first seeded user, so the personal pages
         # are reachable without Entra. See shared/demo.py for why.
-        upn, name, _dept = _USERS[0]
-        await bind_demo_persona(s, user_id="user-0", upn=upn, display_name=name)
+        await bind_demo_persona(s, user_id="user-0")
         await s.commit()
     return {
         "cost_rows": cost_rows, "credit_rows": credit_rows,

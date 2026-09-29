@@ -145,33 +145,63 @@ async def is_admin(user: CurrentUser, session: AsyncSession) -> bool:
     return await is_group_member(principal, group_id, session)
 
 
+async def personal_view_user_id(
+    user: CurrentUser, session: AsyncSession
+) -> str | None:
+    """The directory user whose personal view this account may see, if any.
+
+    Normally that is the signed-in person themselves, taken from the token's
+    Entra object ID. The exception is the local password account while demo
+    data is loaded: it has no directory identity of its own, so it stands in
+    for the seeded demo persona. Without that, the personal pages cannot be
+    opened at all without Entra, and anyone evaluating the product never sees
+    them.
+
+    Only the local *administrator* stands in. Any other password account is
+    left as it was: the binding exists so whoever loaded the demo data can look
+    at the pages it unlocks, not so that every account in the deployment
+    inherits a fictional person.
+
+    The binding is only ever written by an explicit demo seed and is cleared
+    with the demo data, so a real deployment that has never seeded returns None
+    here and behaves exactly as before.
+    """
+    if user.oid:
+        return user.oid
+    if user.role != "admin":
+        return None
+
+    from shared.demo import get_demo_persona_user_id
+
+    return await get_demo_persona_user_id(session)
+
+
 async def resolve_identity(
     user: CurrentUser, session: AsyncSession
 ) -> tuple[str | None, str | None, bool]:
     """Who this request is *about*: (display name, UPN, has a personal view).
 
-    An Entra sign-in answers itself — the token carries the identity. The local
-    password admin has no directory identity, which is right in production and
-    wrong while evaluating: the README invites someone to press Load demo data,
-    and they would then be unable to reach the personal pages that same README
-    advertises.
-
-    So when demo data has bound a persona, the local admin borrows it. The
-    borrowed name is reported too, not just the access: the sidebar otherwise
-    shows the account name where the person's name belongs, and "admin" over
-    "ADMIN" tells the reader nothing.
-
-    The binding only ever exists while demo data is loaded — see shared/demo.py.
+    An Entra sign-in answers itself — the token carries the identity. A local
+    admin standing in for a demo persona reports the borrowed name and UPN,
+    not just the borrowed access: the sidebar otherwise shows the account name
+    where the person's name belongs, and "admin" over "ADMIN" tells the reader
+    nothing.
     """
     if user.has_personal_view:
         return user.display_name, user.upn, True
 
-    from shared.demo import get_demo_persona
-
-    persona = await get_demo_persona(session)
-    if persona is None:
+    persona_id = await personal_view_user_id(user, session)
+    if persona_id is None:
         return user.display_name, user.upn, False
-    return persona.get("display_name"), persona.get("upn"), True
+
+    from shared.models import DirectoryUser
+
+    directory = await session.get(DirectoryUser, persona_id)
+    if directory is None:
+        # Bound to a row that is no longer there — treat it as unbound rather
+        # than showing a personal view scoped to nobody.
+        return user.display_name, user.upn, False
+    return directory.display_name, directory.upn, True
 
 
 async def effective_role(user: CurrentUser, session: AsyncSession) -> str:
@@ -251,6 +281,7 @@ __all__ = [
     "effective_role",
     "get_current_user",
     "get_session",
+    "personal_view_user_id",
     "resolve_identity",
     "is_admin",
     "require_admin",

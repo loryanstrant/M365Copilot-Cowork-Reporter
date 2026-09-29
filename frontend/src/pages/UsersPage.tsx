@@ -26,8 +26,14 @@ export default function UsersPage() {
       { key: "upn", header: "UPN", accessor: (r) => r.user_principal_name },
       { key: "job_title", header: "Job title", accessor: (r) => r.job_title },
       { key: "department", header: "Department", accessor: (r) => r.department },
-      { key: "company", header: "Company", accessor: (r) => r.company_name },
-      { key: "office", header: "Office", accessor: (r) => r.office_location },
+      // Company and Office are deliberately not shown, and the choice was
+      // measured rather than guessed. At a 1600px window the card gives the
+      // table 1254px; with both present it wanted 1380 and the Licence column
+      // fell off the right edge. Company is the same string on every row in a
+      // single-tenant directory, so it is width spent on nothing; Office is
+      // geography that Department and Country already cover for this page's
+      // purpose. Without them the table measures 1138px and has room to
+      // spare. Both fields are still returned by the API.
       { key: "country", header: "Country", accessor: (r) => r.country },
       { key: "manager", header: "Manager", accessor: (r) => r.manager_name },
       {

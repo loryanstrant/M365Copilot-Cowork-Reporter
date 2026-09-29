@@ -18,8 +18,12 @@ import pytest_asyncio
 from asgi_lifespan import LifespanManager
 
 from shared.db import SessionLocal
-from shared.demo import bind_demo_persona, get_demo_persona, retire_demo_persona
-from shared.models import AppUser
+from shared.demo import (
+    bind_demo_persona,
+    get_demo_persona_user_id,
+    retire_demo_persona,
+)
+from shared.models import AppUser, DirectoryUser
 from shared.security import hash_password
 
 
@@ -42,8 +46,18 @@ async def _admin_headers(client: httpx.AsyncClient) -> dict[str, str]:
 
 
 async def _bind(upn="ada@contoso.com", name="Ada Lovelace", uid="user-0"):
+    """Seed a directory user and bind the local admin to it."""
     async with SessionLocal() as s:
-        await bind_demo_persona(s, user_id=uid, upn=upn, display_name=name)
+        s.add(
+            DirectoryUser(
+                user_id=uid,
+                upn=upn,
+                display_name=name,
+                account_enabled=True,
+                user_type="Member",
+            )
+        )
+        await bind_demo_persona(s, user_id=uid)
         await s.commit()
 
 
@@ -137,16 +151,28 @@ async def test_retire_is_idempotent():
         await retire_demo_persona(s)
         await retire_demo_persona(s)
         await s.commit()
-        assert await get_demo_persona(s) is None
+        assert await get_demo_persona_user_id(s) is None
 
 
 @pytest.mark.asyncio
-async def test_a_half_written_persona_is_not_treated_as_bound():
-    """A row with no identity in it resolves to nothing rather than a blank user."""
-    from shared.models import IngestState
-    from shared.demo import DEMO_PERSONA_KEY
-
+async def test_a_persona_pointing_at_a_deleted_user_is_not_a_personal_view(client):
+    """Bound to a row that is no longer there — do not show a view scoped to nobody."""
+    headers = await _admin_headers(client)
     async with SessionLocal() as s:
-        s.add(IngestState(key=DEMO_PERSONA_KEY, detail={}))
+        await bind_demo_persona(s, user_id="ghost")
         await s.commit()
-        assert await get_demo_persona(s) is None
+    body = (await client.get("/auth/me", headers=headers)).json()
+    assert body["has_personal_view"] is False
+
+
+@pytest.mark.asyncio
+async def test_a_non_admin_password_account_does_not_inherit_the_persona(client):
+    """The binding exists for whoever loaded the demo data, not for everyone."""
+    from api.auth import create_access_token
+
+    await _bind()
+    token = create_access_token("viewer-acct", "viewer")
+    body = (
+        await client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
+    ).json()
+    assert body["has_personal_view"] is False
