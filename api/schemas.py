@@ -105,6 +105,26 @@ class JobRunOut(BaseModel):
     stats: dict | None = None
 
 
+class ScanRunOut(BaseModel):
+    """One row of the Scan history page.
+
+    Both the readable label and the raw value are returned for kind and status.
+    The page renders the label, but a kind this build has no label for has to
+    still show something, and the raw value is the only honest fallback.
+    """
+
+    id: int
+    kind: str
+    raw_kind: str
+    state: str
+    raw_status: str
+    started_at: str | None = None
+    finished_at: str | None = None
+    duration_seconds: int | None = None
+    error: str | None = None
+    stats: dict = {}
+
+
 class StatusOut(BaseModel):
     configured: bool
     last_run: JobRunOut | None = None
@@ -280,7 +300,12 @@ class PeerStatOut(BaseModel):
 
     label: str
     mine: int
+    # The median across the viewer's peers — the team without them in it, so
+    # the bar answers "how do I compare with the rest of my team" rather than
+    # being dragged toward the viewer's own figure. Zero when withheld.
     team_median: int
+    # Zero when the organisation is below the disclosure floor too. `mine` is
+    # always sent: the viewer's own figures are never a disclosure.
     org_median: int
     team_people: int = 0
     org_people: int = 0
@@ -290,11 +315,42 @@ class MyStandingOut(BaseModel):
     """How this person compares, and to whom."""
 
     # The department this person's "team" was taken from, or the manager's name
-    # when they have no department. None when neither is known, in which case
-    # the team comparison is not shown at all rather than shown as zero.
+    # when they have no department. None when the team series is not drawn.
     team_label: str | None = None
-    # 0-100. 90 means they did more than 90% of the people counted.
-    org_percentile: int = 0
+    # Why the team series is or is not there, so the page can say which. The
+    # two reasons for withholding are different facts about the tenant and a
+    # reader can act on one of them: "shown" | "too_small" | "unknown".
+    team_state: str = "unknown"
+    # Peers found in the grouping, excluding the viewer. Reported even when the
+    # series is withheld, because "your team is 3 people" is the explanation.
+    team_peers: int = 0
+    # The floor below which a team is not drawn, so the page can name it in the
+    # withholding message rather than hard-coding a number that could drift.
+    min_team_peers: int = 5
+    # The window all three series cover. Named on the panel, because a
+    # comparison whose period is unstated invites the reader to assume it is
+    # all-time for the team and recent for them.
+    period_days: int = 30
+    period_from: date | None = None
+    period_to: date | None = None
+    # The organisation series answers to the same floor as the team. The
+    # arithmetic that makes a small team disclosing does not care what the
+    # group is called: in a four-person pilot tenant, the organisation average
+    # and the viewer's own figure narrow an individual exactly as a team of
+    # four would. "shown" | "too_small" — there is no "unknown" here, because
+    # the organisation is always known.
+    organisation_state: str = "shown"
+    # People besides the viewer. Reported even when withheld, so the page can
+    # explain rather than just omit a bar.
+    org_peers: int = 0
+    # 0-100, measured against the organisation and never against the team: in a
+    # team of four a team-relative percentile says more about the size of the
+    # team than about the person.
+    #
+    # None when the organisation is withheld. A rank left standing after the
+    # series it was measured against has gone discloses by another route.
+    org_percentile: int | None = None
+    org_people: int = 0
     stats: list[PeerStatOut] = []
 
 

@@ -9,11 +9,12 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from fastapi import APIRouter, BackgroundTasks, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.auth import CurrentUser, require_admin
+from api.metrics import scan_history
 from api.oidc import reset_app_cache, reset_group_cache
 from api.schemas import (
     AppConfigIn,
@@ -22,6 +23,7 @@ from api.schemas import (
     BillingPolicyOut,
     IngestRunOut,
     JobRunOut,
+    ScanRunOut,
     StatusOut,
     TestConnectionOut,
 )
@@ -201,8 +203,10 @@ async def seed_demo(reset: bool = True) -> IngestRunOut:
     return IngestRunOut(
         status="seeded",
         detail=(
-            f"Seeded {stats['cost_rows']} cost rows, {stats['events']} events, "
-            f"{stats['usage_rows']} usage rows, {stats['credit_rows']} credit rows."
+            f"Seeded {stats['people']} people, {stats['cost_rows']} cost rows, "
+            f"{stats['events']} events, {stats['usage_rows']} usage rows, "
+            f"{stats['credit_rows']} credit rows and {stats['job_rows']} "
+            f"collection runs."
         ),
     )
 
@@ -265,6 +269,20 @@ async def delete_billing_policy(
         await session.delete(row)
         await session.commit()
     return IngestRunOut(status="deleted", detail=resource_group)
+
+
+@router.get("/scan-history", response_model=list[ScanRunOut])
+async def scan_history_rows(
+    limit: int = Query(100, ge=1, le=500),
+    session: AsyncSession = Depends(get_session),
+) -> list[ScanRunOut]:
+    """Every collection run, newest first, for the Scan history page.
+
+    Admin-gated with the rest of this router. A run log names the collectors
+    and the errors they hit, which is operational detail rather than usage
+    data, and the people who can act on it are the people who configured it.
+    """
+    return [ScanRunOut(**row) for row in await scan_history(session, limit=limit)]
 
 
 @router.get("/status", response_model=StatusOut)

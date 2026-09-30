@@ -970,6 +970,24 @@ async def my_top_tools(
     return [MyTopItemOut(name=n, value=v) for n, v in ranked]
 
 
+# A team series is only drawn when the grouping holds at least this many people
+# besides the viewer.
+#
+# This is a disclosure rule, not a presentation preference. "Aggregates only"
+# stops being true at small n: with two people in a team, the team figure and
+# the viewer's own figure together give the other person's exact number, and
+# anyone can do that arithmetic in their head. At three or four it is close
+# enough to matter. The floor applies to whichever grouping is in use —
+# falling back from a department of one to a manager group of two fixes
+# nothing. See docs/specs/comparisons-and-timelines.md.
+#
+# The consequence, stated plainly: in a small tenant, or one that populates
+# departments sparsely, most people see two series rather than three. That is
+# the correct outcome. The alternative is a report that quietly discloses
+# colleagues' usage.
+MIN_TEAM_PEERS = 5
+
+
 def _median(values: list[int]) -> int:
     if not values:
         return 0
@@ -993,11 +1011,14 @@ async def my_standing(
     someone who has no organisation-wide access at all — the personal page is
     reachable by every signed-in user by design.
 
-    "Team" is the department from dim_user, falling back to the manager's name
-    when the tenant does not populate departments. When neither is known the
-    team comparison is omitted rather than shown as zero, because an empty bar
-    reads as "you are miles ahead of your team" when it actually means "we do
-    not know who your team is".
+    "Team" is the department, falling back to the people sharing this person's
+    manager when the department is unknown or too small. It is omitted rather
+    than shown as zero in two cases, and the response says which: the grouping
+    holds fewer than MIN_TEAM_PEERS people besides the viewer, or no grouping
+    is known at all. An empty bar reads as "you are miles ahead of your team"
+    when it actually means one of those two things, and they are different
+    facts about the tenant — one is fixed by populating departments, the other
+    cannot be fixed and should not be.
     """
     oid, upn = await _me_identity(user, session)
 
@@ -1037,45 +1058,138 @@ async def my_standing(
     me_key = (oid or (upn.lower() if upn else None)) or None
     mine = next((r for r in totals if r.person == me_key), None)
 
-    team_label = None
+    # Who counts as "my team", and whether there are enough of them to draw.
+    # The department is tried first; a department too small to pass the floor
+    # falls back to the people sharing a manager, which is a different grouping
+    # and can be larger. If neither clears it, no team series is drawn.
+    team_label: str | None = None
+    peers: list = []
+    # Whether a grouping was identified at all, which is a different question
+    # from whether it turned out to hold anybody. A department of one is a
+    # known department that is too small, not an unknown team, and the page
+    # tells the reader which — so this cannot be inferred from len(peers).
+    grouping_found = False
+
+    def _same(value: str | None, wanted: str) -> bool:
+        # Both sides stripped. Entra's department and manager fields are often
+        # hand-maintained, and a trailing space on one row would silently drop
+        # a real peer — which can push an adequate team under the floor.
+        return (value or "").strip() == wanted
+
     if mine is not None:
-        team_label = mine.department or mine.manager_name
+        dept = (mine.department or "").strip()
+        if dept:
+            grouping_found = True
+            peers = [
+                r for r in totals
+                if _same(r.department, dept) and r.person != me_key
+            ]
+            team_label = dept
+        if len(peers) < MIN_TEAM_PEERS:
+            mgr = (mine.manager_name or "").strip()
+            if mgr:
+                grouping_found = True
+                mgr_peers = [
+                    r for r in totals
+                    if _same(r.manager_name, mgr) and r.person != me_key
+                ]
+                # Only take the fallback if it is actually an improvement.
+                # Swapping a department of four for a manager group of two
+                # trades one withheld series for another and loses the label
+                # that was at least accurate.
+                if len(mgr_peers) > len(peers):
+                    peers = mgr_peers
+                    team_label = f"{mgr}'s team"
 
-    def _team_rows():
-        if not team_label:
-            return []
-        if mine is not None and mine.department:
-            return [r for r in totals if r.department == team_label]
-        return [r for r in totals if r.manager_name == team_label]
+    show_team = len(peers) >= MIN_TEAM_PEERS
+    if show_team:
+        team_state = "shown"
+    elif grouping_found:
+        # Includes a department of one. The department is on file; it is simply
+        # below the floor, and saying "we don't know your team" there would
+        # send an administrator hunting a data-quality problem that is not
+        # there. The spec calls this case out by name.
+        team_state = "too_small"
+    else:
+        team_state = "unknown"
+    if not show_team:
+        team_label = None
 
-    team = _team_rows()
+    # The same floor applies to the organisation. The arithmetic that makes a
+    # small team disclosing does not care what the group is called: in a
+    # four-person pilot tenant, the Organisation bar plus the viewer's own
+    # figure narrows an individual exactly as a team of four would, and this
+    # endpoint was drawing it.
+    org_peers = [r for r in totals if r.person != me_key]
+    show_org = len(org_peers) >= MIN_TEAM_PEERS
+    organisation_state = "shown" if show_org else "too_small"
 
     def _stat(label: str, attr: str) -> PeerStatOut:
         org_values = [int(getattr(r, attr) or 0) for r in totals]
-        team_values = [int(getattr(r, attr) or 0) for r in team]
+        peer_values = [int(getattr(r, attr) or 0) for r in peers]
         return PeerStatOut(
             label=label,
+            # The viewer's own figures are never a disclosure and are always
+            # sent, so a person in a tenant too small to compare against still
+            # gets a page with their numbers on it rather than an empty card.
             mine=int(getattr(mine, attr) or 0) if mine is not None else 0,
-            team_median=_median(team_values),
-            org_median=_median(org_values),
-            team_people=len(team_values),
-            org_people=len(org_values),
+            # Withheld means withheld: the figure is not sent and then hidden
+            # by the page, because a number that reaches the browser has been
+            # disclosed whatever the page does with it.
+            team_median=_median(peer_values) if show_team else 0,
+            org_median=_median(org_values) if show_org else 0,
+            team_people=len(peers) if show_team else 0,
+            org_people=len(org_values) if show_org else 0,
         )
 
     # Percentile on sessions: the share of counted people this person did more
     # than. Ties count as "not more than", so the busiest person is 100 and
     # someone level with everybody is 0 rather than an arbitrary middle.
+    #
+    # Measured across every counted person — the organisation — never across
+    # the team. In a team of six, a team-relative percentile moves in steps of
+    # 17 points and says more about the size of the team than the person.
+    #
+    # It goes when the organisation series goes. A rank left standing after the
+    # series it was measured against has been withheld discloses by another
+    # route — "you are in the top 25% of four people" is a statement about the
+    # same small group, and withholding the bar while keeping the ranking would
+    # be theatre rather than a rule.
     sessions = [int(r.sessions or 0) for r in totals]
     my_sessions = int(mine.sessions or 0) if mine is not None else 0
-    percentile = (
-        round(100 * sum(1 for v in sessions if v < my_sessions) / len(sessions))
-        if sessions
-        else 0
-    )
+    percentile: int | None = None
+    if show_org and sessions:
+        percentile = round(
+            100 * sum(1 for v in sessions if v < my_sessions) / len(sessions)
+        )
+
+    # The window every series was computed over, so the panel can name it. All
+    # three come from the one filtered pass above, so they cannot disagree
+    # about which period they describe — but the reader has no way of knowing
+    # that unless the dates are on screen.
+    # Anchored on the same UTC instant _event_window filters from, not on the
+    # server's local calendar day. Those differ by up to a day outside UTC, and
+    # a panel whose stated dates disagree with the rows behind them is the
+    # exact confusion naming the period was meant to remove.
+    window_end = datetime.now(timezone.utc)
+    period_to = window_end.date()
+    period_from = (window_end - timedelta(days=days)).date()
 
     return MyStandingOut(
         team_label=team_label,
+        team_state=team_state,
+        team_peers=len(peers),
+        min_team_peers=MIN_TEAM_PEERS,
+        period_days=days,
+        period_from=period_from,
+        period_to=period_to,
+        organisation_state=organisation_state,
+        org_peers=len(org_peers),
         org_percentile=percentile,
+        # The population size itself is a count rather than a figure about any
+        # person, so it is sent either way — it is what lets the page explain
+        # that the organisation is too small instead of just omitting a bar.
+        org_people=len(totals),
         stats=[
             _stat("Sessions", "sessions"),
             _stat("Tools used", "tools"),

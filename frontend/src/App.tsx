@@ -12,6 +12,7 @@ import UsersPage from "./pages/UsersPage";
 import SettingsPage from "./pages/SettingsPage";
 import UploadPage from "./pages/UploadPage";
 import BillingPolicyPage from "./pages/BillingPolicyPage";
+import ScanHistoryPage from "./pages/ScanHistoryPage";
 import HelpPage from "./pages/HelpPage";
 import AboutPage from "./pages/AboutPage";
 
@@ -70,6 +71,7 @@ export default function App() {
         <Route path="/settings" element={adminOnly(<SettingsPage />)} />
         <Route path="/upload" element={adminOnly(<UploadPage />)} />
         <Route path="/billing-policies" element={adminOnly(<BillingPolicyPage />)} />
+        <Route path="/scan-history" element={adminOnly(<ScanHistoryPage />)} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>

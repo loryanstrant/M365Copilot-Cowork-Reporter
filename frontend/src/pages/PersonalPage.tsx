@@ -1,14 +1,5 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import { api } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import type {
@@ -17,14 +8,16 @@ import type {
   MyEvent,
   MyStanding,
   MyTopItem,
-  PeerStat,
 } from "../api/types";
+import ActivityTimeline, {
+  type TimelinePoint,
+} from "../components/ActivityTimeline";
 import ChartCard from "../components/ChartCard";
-import ChartTooltip from "../components/ChartTooltip";
 import Empty from "../components/Empty";
 import KpiCard from "../components/KpiCard";
-import { CHART_COLORS, barGradId } from "../components/chartTheme";
-import { fmtDate, fmtDayShort, fmtNumber } from "../lib/format";
+import PeerComparison from "../components/PeerComparison";
+import { CHART_COLORS } from "../components/chartTheme";
+import { fmtDate, fmtNumber } from "../lib/format";
 
 const DAYS = 30;
 
@@ -152,37 +145,16 @@ export default function PersonalPage() {
 
           <ChartCard
             title="Your sessions per day"
-            subtitle={`Cowork audit events, last ${DAYS} days`}
+            subtitle={`Cowork audit events, last ${DAYS} days, with a 7-day trailing average`}
           >
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={daily} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  vertical={false}
-                  className="stroke-slate-200 dark:stroke-slate-700"
-                />
-                <XAxis
-                  dataKey="day"
-                  tick={{ fontSize: 11 }}
-                  tickFormatter={(d: string) => fmtDayShort(d)}
-                  minTickGap={28}
-                />
-                <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                <Tooltip
-                  cursor={{ fill: "rgba(59,110,245,0.06)" }}
-                  content={<ChartTooltip />}
-                />
-                <Bar
-                  dataKey="sessions"
-                  name="Sessions"
-                  fill={`url(#${barGradId(0)})`}
-                  radius={[3, 3, 0, 0]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
+            <ActivityTimeline
+              points={daily as unknown as TimelinePoint[]}
+              dateKey="day"
+              series={[{ key: "sessions", label: "Sessions", colorIndex: 0 }]}
+            />
           </ChartCard>
 
-          {standing && <Standing standing={standing} />}
+          {standing && <PeerComparison standing={standing} />}
 
           <div className="grid gap-4 lg:grid-cols-2">
             <ChartCard
@@ -306,82 +278,6 @@ function RankedBars({
  * user, so putting a named colleague's figures here would hand everyone a
  * league table of people who never agreed to be in one.
  */
-function Standing({ standing }: { standing: MyStanding }) {
-  const { team_label, org_percentile, stats } = standing;
-  return (
-    <ChartCard
-      title="How you compare"
-      subtitle={`● You're in the top ${Math.max(100 - org_percentile, 1)}% of Cowork users${
-        team_label ? ` — against ${team_label} and the organisation` : ""
-      }`}
-    >
-      <div className="grid gap-6 md:grid-cols-3">
-        {stats.map((s) => (
-          <PeerBars key={s.label} stat={s} teamLabel={team_label} />
-        ))}
-      </div>
-      <p className="mt-4 text-xs text-slate-400 dark:text-slate-500">
-        Only medians are shown — never another individual's figures.
-      </p>
-    </ChartCard>
-  );
-}
-
-function PeerBars({ stat, teamLabel }: { stat: PeerStat; teamLabel: string | null }) {
-  // Scale all three bars against the largest of them, so the comparison is
-  // honest: scaling each to its own width would make every row look equal.
-  const max = Math.max(stat.mine, stat.team_median, stat.org_median, 1);
-  const rows: { label: string; value: number; colour: string; suffix?: string }[] = [
-    { label: "You", value: stat.mine, colour: CHART_COLORS[0] },
-  ];
-  if (teamLabel) {
-    rows.push({
-      label: `Your team · ${teamLabel}`,
-      value: stat.team_median,
-      colour: CHART_COLORS[1],
-      suffix: "median",
-    });
-  }
-  rows.push({
-    label: "Organisation",
-    value: stat.org_median,
-    colour: "#94a3b8",
-    suffix: "median",
-  });
-
-  return (
-    <div>
-      <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
-        {stat.label}
-      </div>
-      <div className="space-y-3">
-        {rows.map((r) => (
-          <div key={r.label}>
-            <div className="mb-1 flex items-center justify-between gap-2 text-xs">
-              <span className="truncate font-medium text-slate-700 dark:text-slate-200">
-                {r.label}
-              </span>
-              <span className="shrink-0 tabular-nums text-slate-500 dark:text-slate-400">
-                {fmtNumber(r.value)}
-                {r.suffix ? ` ${r.suffix}` : ""}
-              </span>
-            </div>
-            <div className="h-3 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700/60">
-              <div
-                className="h-3 rounded-full"
-                style={{
-                  width: `${Math.max((r.value / max) * 100, 2)}%`,
-                  backgroundColor: r.colour,
-                }}
-              />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 /**
  * The way through to organisation-wide reporting. When the user isn't allowed,
  * this is shown locked rather than hidden — otherwise people assume the feature

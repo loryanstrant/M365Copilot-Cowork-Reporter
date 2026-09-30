@@ -79,6 +79,16 @@ finding.
 
 </details>
 
+### Scan history
+
+Every collection this report has run — scheduled, manual, historical backfills
+and CSV uploads — with what each one wrote, how long it took and whether it
+worked. Failures show their error. Status is a shape plus a word (● ◐ ○), never
+colour alone.
+
+<!-- Screenshots pending: scan-history.png and scan-history-dark.png.
+     Route /scan-history, admin only, needs seeded demo data. -->
+
 ### Consumption
 
 Azure spend by resource group and Copilot credit consumption, with chargeback
@@ -203,10 +213,17 @@ from the group takes effect in minutes rather than whenever their token next exp
 ## What it does
 
 - **Your activity** — your own Cowork use, led by aggregates rather than a list of rows:
-  sessions, average tools and files per day, active days, a per-day chart, how you compare
-  with your team and with the organisation, and your most-used agents and tools. Comparisons
-  return medians and a percentile only — never another individual's figures. Shown to anyone
-  signed in with a work account.
+  sessions, average tools and files per day, active days, a per-day chart with a seven-day
+  trailing average, how you compare with your team and with the organisation, and your
+  most-used agents and tools. Comparisons return medians and a percentile only — never
+  another individual's figures, and a series is **withheld entirely below five peers** —
+  the team *and* the organisation, because the arithmetic that makes a small group
+  disclosing does not care what the group is called, and in a four-person pilot tenant the
+  organisation average gives a colleague away exactly as a small team would. Your ranking is
+  withheld with it, since a rank is a statement about the same group. Your own figures are
+  always shown, with a sentence explaining what is missing and why. The
+  panel names the period it covers and states that your percentile is measured against the
+  organisation rather than your team. Shown to anyone signed in with a work account.
 - **Executive briefing** — the last 30 days against the 30 before them: sessions, tools, files,
   Azure spend, licensed-user adoption, leading agents and leading resource groups. Deterministic
   end to end. Every figure is SQL and the sentences are assembled from those figures against
@@ -218,6 +235,11 @@ from the group takes effect in minutes rather than whenever their token next exp
   with what they have actually done. People with a licence and no activity are listed rather
   than filtered out, because that is the row that answers "who are we paying for and getting
   nothing from".
+- **Scan history (admin)** — every collection run, newest first: scheduled, manual, historical
+  backfills and both CSV uploads, with what each one wrote, how long it took and whether it
+  succeeded. Failures show their error. This is what `job_runs` has recorded since the first
+  release and nothing displayed, so "did last night's collection work?" now has an answer in
+  the UI rather than only in the container's logs.
 - **Chargeback (admin)** — map each resource group to a cost centre or business unit.
 - **Upload CSV (admin)** — load the two admin-centre exports that have no API.
 - **Settings (admin)** — app-registration config (secret write-only, Fernet-encrypted), a guided

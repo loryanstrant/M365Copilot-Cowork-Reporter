@@ -19,6 +19,9 @@ const ORG_NAV = [
 const ADMIN_NAV = [
   { to: "/upload", label: "Upload CSV" },
   { to: "/billing-policies", label: "Chargeback" },
+  // job_runs has recorded every collection since the first release and nothing
+  // ever showed it, so "did last night's pull work?" had no answer in the UI.
+  { to: "/scan-history", label: "Scan history" },
   { to: "/settings", label: "Settings" },
 ];
 
