@@ -970,6 +970,24 @@ async def my_top_tools(
     return [MyTopItemOut(name=n, value=v) for n, v in ranked]
 
 
+# A team series is only drawn when the grouping holds at least this many people
+# besides the viewer.
+#
+# This is a disclosure rule, not a presentation preference. "Aggregates only"
+# stops being true at small n: with two people in a team, the team figure and
+# the viewer's own figure together give the other person's exact number, and
+# anyone can do that arithmetic in their head. At three or four it is close
+# enough to matter. The floor applies to whichever grouping is in use —
+# falling back from a department of one to a manager group of two fixes
+# nothing. See docs/specs/comparisons-and-timelines.md.
+#
+# The consequence, stated plainly: in a small tenant, or one that populates
+# departments sparsely, most people see two series rather than three. That is
+# the correct outcome. The alternative is a report that quietly discloses
+# colleagues' usage.
+MIN_TEAM_PEERS = 5
+
+
 def _median(values: list[int]) -> int:
     if not values:
         return 0
@@ -993,11 +1011,14 @@ async def my_standing(
     someone who has no organisation-wide access at all — the personal page is
     reachable by every signed-in user by design.
 
-    "Team" is the department from dim_user, falling back to the manager's name
-    when the tenant does not populate departments. When neither is known the
-    team comparison is omitted rather than shown as zero, because an empty bar
-    reads as "you are miles ahead of your team" when it actually means "we do
-    not know who your team is".
+    "Team" is the department, falling back to the people sharing this person's
+    manager when the department is unknown or too small. It is omitted rather
+    than shown as zero in two cases, and the response says which: the grouping
+    holds fewer than MIN_TEAM_PEERS people besides the viewer, or no grouping
+    is known at all. An empty bar reads as "you are miles ahead of your team"
+    when it actually means one of those two things, and they are different
+    facts about the tenant — one is fixed by populating departments, the other
+    cannot be fixed and should not be.
     """
     oid, upn = await _me_identity(user, session)
 
@@ -1037,34 +1058,65 @@ async def my_standing(
     me_key = (oid or (upn.lower() if upn else None)) or None
     mine = next((r for r in totals if r.person == me_key), None)
 
-    team_label = None
+    # Who counts as "my team", and whether there are enough of them to draw.
+    # The department is tried first; a department too small to pass the floor
+    # falls back to the people sharing a manager, which is a different grouping
+    # and can be larger. If neither clears it, no team series is drawn.
+    team_label: str | None = None
+    peers: list = []
     if mine is not None:
-        team_label = mine.department or mine.manager_name
+        dept = (mine.department or "").strip()
+        if dept:
+            peers = [
+                r for r in totals if r.department == dept and r.person != me_key
+            ]
+            team_label = dept
+        if len(peers) < MIN_TEAM_PEERS:
+            mgr = (mine.manager_name or "").strip()
+            if mgr:
+                mgr_peers = [
+                    r for r in totals if r.manager_name == mgr and r.person != me_key
+                ]
+                # Only take the fallback if it is actually an improvement.
+                # Swapping a department of four for a manager group of two
+                # trades one withheld series for another and loses the label
+                # that was at least accurate.
+                if len(mgr_peers) > len(peers):
+                    peers = mgr_peers
+                    team_label = f"{mgr}'s team"
 
-    def _team_rows():
-        if not team_label:
-            return []
-        if mine is not None and mine.department:
-            return [r for r in totals if r.department == team_label]
-        return [r for r in totals if r.manager_name == team_label]
-
-    team = _team_rows()
+    show_team = len(peers) >= MIN_TEAM_PEERS
+    if show_team:
+        team_state = "shown"
+    elif peers:
+        team_state = "too_small"
+    else:
+        team_state = "unknown"
+    if not show_team:
+        team_label = None
 
     def _stat(label: str, attr: str) -> PeerStatOut:
         org_values = [int(getattr(r, attr) or 0) for r in totals]
-        team_values = [int(getattr(r, attr) or 0) for r in team]
+        peer_values = [int(getattr(r, attr) or 0) for r in peers]
         return PeerStatOut(
             label=label,
             mine=int(getattr(mine, attr) or 0) if mine is not None else 0,
-            team_median=_median(team_values),
+            # Withheld means withheld: the figure is not sent and then hidden
+            # by the page, because a number that reaches the browser has been
+            # disclosed whatever the page does with it.
+            team_median=_median(peer_values) if show_team else 0,
             org_median=_median(org_values),
-            team_people=len(team_values),
+            team_people=len(peers) if show_team else 0,
             org_people=len(org_values),
         )
 
     # Percentile on sessions: the share of counted people this person did more
     # than. Ties count as "not more than", so the busiest person is 100 and
     # someone level with everybody is 0 rather than an arbitrary middle.
+    #
+    # Measured across every counted person — the organisation — never across
+    # the team. In a team of six, a team-relative percentile moves in steps of
+    # 17 points and says more about the size of the team than the person.
     sessions = [int(r.sessions or 0) for r in totals]
     my_sessions = int(mine.sessions or 0) if mine is not None else 0
     percentile = (
@@ -1073,9 +1125,23 @@ async def my_standing(
         else 0
     )
 
+    # The window every series was computed over, so the panel can name it. All
+    # three come from the one filtered pass above, so they cannot disagree
+    # about which period they describe — but the reader has no way of knowing
+    # that unless the dates are on screen.
+    period_to = date.today()
+    period_from = period_to - timedelta(days=days - 1)
+
     return MyStandingOut(
         team_label=team_label,
+        team_state=team_state,
+        team_peers=len(peers),
+        min_team_peers=MIN_TEAM_PEERS,
+        period_days=days,
+        period_from=period_from,
+        period_to=period_to,
         org_percentile=percentile,
+        org_people=len(totals),
         stats=[
             _stat("Sessions", "sessions"),
             _stat("Tools used", "tools"),

@@ -209,9 +209,23 @@ export interface PeerStat {
 }
 
 export interface MyStanding {
-  /** Department, or the manager's name, or null when neither is known. */
+  /** Department, or the manager's team, or null when the team is withheld. */
   team_label: string | null;
+  /**
+   * Why the team series is or is not drawn. "too_small" and "unknown" are
+   * different facts about the tenant and the panel says which: one is fixed by
+   * populating departments, the other cannot be fixed and should not be.
+   */
+  team_state: "shown" | "too_small" | "unknown";
+  /** Peers found, excluding the viewer. Non-zero even when withheld. */
+  team_peers: number;
+  min_team_peers: number;
+  period_days: number;
+  period_from: string | null;
+  period_to: string | null;
+  /** Measured against the organisation, never the team. */
   org_percentile: number;
+  org_people: number;
   stats: PeerStat[];
 }
 

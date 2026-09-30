@@ -217,33 +217,70 @@ async def test_top_tools_handles_dict_shaped_entries(client):
 # --------------------------------------------------------------------------- #
 @pytest.mark.asyncio
 async def test_standing_compares_against_team_and_organisation(client):
+    """Five departmental peers — the smallest team that may be drawn at all.
+
+    This fixture used to hold one peer, and the disclosure rule now withholds
+    that. The peers are deliberately not all equal so the median is a real
+    median, and the viewer is excluded from it: the bar answers "how do I
+    compare with the rest of my team", not "how do I compare with a group I am
+    a sixth of".
+    """
     await _person(ME_OID, ME_UPN, "Ada", dept="Engineering")
-    await _person("t1", "t1@contoso.com", "Team mate", dept="Engineering")
+    for i, count in enumerate([2, 3, 4, 5, 6]):
+        await _person(f"t{i}", f"t{i}@contoso.com", f"Team mate {i}", dept="Engineering")
+        for j in range(count):
+            await _event(f"tm{i}-{j}", oid=f"t{i}")
     await _person("s1", "s1@contoso.com", "Someone", dept="Sales")
 
     for i in range(10):
         await _event(f"me{i}")
-    for i in range(4):
-        await _event(f"tm{i}", oid="t1")
     await _event("s0", oid="s1")
 
     body = (await client.get("/metrics/me/standing", headers=_me())).json()
+    assert body["team_state"] == "shown"
     assert body["team_label"] == "Engineering"
     sessions = next(s for s in body["stats"] if s["label"] == "Sessions")
     assert sessions["mine"] == 10
-    assert sessions["team_people"] == 2
-    assert sessions["org_people"] == 3
-    # Team median of [10, 4] is 7; org median of [10, 4, 1] is 4.
-    assert sessions["team_median"] == 7
+    assert sessions["team_people"] == 5
+    assert sessions["org_people"] == 7
+    # Peer sessions are [2, 3, 4, 5, 6] and I am not among them, so the team
+    # median is 4. The organisation is all seven of us: [10, 6, 5, 4, 3, 2, 1].
+    assert sessions["team_median"] == 4
     assert sessions["org_median"] == 4
 
 
 @pytest.mark.asyncio
 async def test_standing_falls_back_to_the_manager_when_no_department(client):
+    """And the fallback group has to clear the same floor as a department."""
     await _person(ME_OID, ME_UPN, "Ada", manager="Grace Hopper")
     await _event("e1")
+    for i in range(5):
+        await _person(f"m{i}", f"m{i}@contoso.com", f"Report {i}", manager="Grace Hopper")
+        await _event(f"m{i}a", oid=f"m{i}")
+
     body = (await client.get("/metrics/me/standing", headers=_me())).json()
-    assert body["team_label"] == "Grace Hopper"
+    assert body["team_state"] == "shown"
+    assert body["team_label"] == "Grace Hopper's team"
+    assert body["team_peers"] == 5
+
+
+@pytest.mark.asyncio
+async def test_standing_withholds_a_manager_group_below_the_floor(client):
+    """The old fixture: one manager peer, which is now withheld.
+
+    Two people sharing a manager is the case the disclosure rule exists for —
+    the group average and the viewer's own figure give the other person's
+    number exactly.
+    """
+    await _person(ME_OID, ME_UPN, "Ada", manager="Grace Hopper")
+    await _person("m0", "m0@contoso.com", "Report", manager="Grace Hopper")
+    await _event("e1")
+    await _event("m0a", oid="m0")
+
+    body = (await client.get("/metrics/me/standing", headers=_me())).json()
+    assert body["team_state"] == "too_small"
+    assert body["team_label"] is None
+    assert body["team_peers"] == 1
 
 
 @pytest.mark.asyncio

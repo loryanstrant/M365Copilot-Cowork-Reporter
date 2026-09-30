@@ -300,6 +300,9 @@ class PeerStatOut(BaseModel):
 
     label: str
     mine: int
+    # The median across the viewer's peers — the team without them in it, so
+    # the bar answers "how do I compare with the rest of my team" rather than
+    # being dragged toward the viewer's own figure. Zero when withheld.
     team_median: int
     org_median: int
     team_people: int = 0
@@ -310,11 +313,30 @@ class MyStandingOut(BaseModel):
     """How this person compares, and to whom."""
 
     # The department this person's "team" was taken from, or the manager's name
-    # when they have no department. None when neither is known, in which case
-    # the team comparison is not shown at all rather than shown as zero.
+    # when they have no department. None when the team series is not drawn.
     team_label: str | None = None
-    # 0-100. 90 means they did more than 90% of the people counted.
+    # Why the team series is or is not there, so the page can say which. The
+    # two reasons for withholding are different facts about the tenant and a
+    # reader can act on one of them: "shown" | "too_small" | "unknown".
+    team_state: str = "unknown"
+    # Peers found in the grouping, excluding the viewer. Reported even when the
+    # series is withheld, because "your team is 3 people" is the explanation.
+    team_peers: int = 0
+    # The floor below which a team is not drawn, so the page can name it in the
+    # withholding message rather than hard-coding a number that could drift.
+    min_team_peers: int = 5
+    # The window all three series cover. Named on the panel, because a
+    # comparison whose period is unstated invites the reader to assume it is
+    # all-time for the team and recent for them.
+    period_days: int = 30
+    period_from: date | None = None
+    period_to: date | None = None
+    # 0-100, measured against the organisation and never against the team: in a
+    # team of four a team-relative percentile says more about the size of the
+    # team than about the person. org_people carries the population so the page
+    # can state what it was measured against.
     org_percentile: int = 0
+    org_people: int = 0
     stats: list[PeerStatOut] = []
 
 

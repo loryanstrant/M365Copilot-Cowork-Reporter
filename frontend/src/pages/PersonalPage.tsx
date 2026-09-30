@@ -306,13 +306,53 @@ function RankedBars({
  * user, so putting a named colleague's figures here would hand everyone a
  * league table of people who never agreed to be in one.
  */
+function fmtPeriod(from: string | null, to: string | null, days: number): string {
+  if (!from || !to) return `the last ${days} days`;
+  const d = (iso: string) =>
+    new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, {
+      day: "numeric",
+      month: "short",
+    });
+  return `${d(from)} – ${d(to)}`;
+}
+
+/**
+ * Why there is no team series, in the reader's terms.
+ *
+ * The two reasons are different facts about the tenant and only one of them is
+ * fixable: a team below the disclosure floor will never be shown, whereas an
+ * unknown team means nobody has populated departments and somebody could.
+ * Collapsing them into "no team data" leaves an administrator with no idea
+ * which of those they are looking at.
+ */
+function teamWithheldNote(standing: MyStanding): string | null {
+  if (standing.team_state === "shown") return null;
+  if (standing.team_state === "too_small") {
+    return `Your team is too small to show — ${standing.team_peers} ${
+      standing.team_peers === 1 ? "person" : "people"
+    } besides you, and a team average is only shown from ${
+      standing.min_team_peers
+    }. Below that, the average and your own figure would give away an individual's number.`;
+  }
+  return "We don't know which team you're in — your directory record has no department or manager, so there is nobody to compare you with.";
+}
+
 function Standing({ standing }: { standing: MyStanding }) {
-  const { team_label, org_percentile, stats } = standing;
+  const { team_label, org_percentile, org_people, stats } = standing;
+  const period = fmtPeriod(
+    standing.period_from,
+    standing.period_to,
+    standing.period_days,
+  );
+  const withheld = teamWithheldNote(standing);
   return (
     <ChartCard
       title="How you compare"
-      subtitle={`● You're in the top ${Math.max(100 - org_percentile, 1)}% of Cowork users${
-        team_label ? ` — against ${team_label} and the organisation` : ""
+      subtitle={`${period} · ● you're in the top ${Math.max(
+        100 - org_percentile,
+        1,
+      )}% of the ${org_people.toLocaleString()} people in this organisation${
+        team_label ? `, and against ${team_label}` : ""
       }`}
     >
       <div className="grid gap-6 md:grid-cols-3">
@@ -320,8 +360,14 @@ function Standing({ standing }: { standing: MyStanding }) {
           <PeerBars key={s.label} stat={s} teamLabel={team_label} />
         ))}
       </div>
+      {withheld && (
+        <p className="mt-4 rounded-lg bg-slate-50 p-3 text-xs text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
+          {withheld}
+        </p>
+      )}
       <p className="mt-4 text-xs text-slate-400 dark:text-slate-500">
-        Only medians are shown — never another individual's figures.
+        Only medians are shown — never another individual's figures. Your
+        percentile is measured against the whole organisation, not your team.
       </p>
     </ChartCard>
   );
@@ -336,7 +382,11 @@ function PeerBars({ stat, teamLabel }: { stat: PeerStat; teamLabel: string | nul
   ];
   if (teamLabel) {
     rows.push({
-      label: `Your team · ${teamLabel}`,
+      // The manager fallback already names itself a team ("Ping Lim's team"),
+      // so prefixing it again reads as "Your team · Ping Lim's team".
+      label: teamLabel.endsWith("'s team")
+        ? teamLabel
+        : `Your team · ${teamLabel}`,
       value: stat.team_median,
       colour: CHART_COLORS[1],
       suffix: "median",
