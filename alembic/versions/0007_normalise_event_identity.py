@@ -47,7 +47,12 @@ depends_on = None
 
 
 def _normalise(bind: sa.engine.Connection) -> int:
-    """Re-key events onto the directory. Returns the number of UPDATEs issued."""
+    """Re-key events onto the directory.
+
+    Returns the number of UPDATE statements issued — one per distinct stored
+    (user_id, user_principal_name) pair that needed changing, which is not the
+    same as the number of rows affected.
+    """
     directory: dict[str, tuple[str, str | None]] = {}
     for user_id, upn in bind.execute(
         sa.text("SELECT user_id, upn FROM dim_user")
@@ -63,34 +68,24 @@ def _normalise(bind: sa.engine.Connection) -> int:
         )
     ).all()
 
-    set_clause = (
-        "UPDATE fact_cowork_event "
-        "SET user_id = :new_id, user_principal_name = :new_upn "
-    )
-    # A row that arrived with no object ID at all is addressed by its UPN, and
-    # `= NULL` matches nothing on either dialect — hence the two spellings
-    # rather than one predicate that silently updates no rows.
-    by_id = sa.text(set_clause + "WHERE user_id = :old_id")
-    by_upn = sa.text(
-        set_clause + "WHERE user_id IS NULL AND user_principal_name = :old_upn"
-    )
+    # Each statement addresses **exactly** the pair it was derived from, never
+    # just one half of it. Matching on `user_id` alone would be enough for the
+    # data this was written for and wrong in general: an object ID that appears
+    # beside two different UPNs would have every one of its rows swept onto
+    # whichever of the two happened to be resolved first. The identifiers here
+    # are inconsistent by assumption — that is the whole premise — so the
+    # migration does not get to assume one of them is reliable on its own.
+    #
+    # `= NULL` matches nothing on either dialect, so a NULL on either side
+    # needs `IS NULL` rather than a bind parameter, and the predicate is built
+    # per pair instead of spelled once.
     updated = 0
-    # One UPDATE per identifier, not per (id, UPN) pair. The same object ID can
-    # appear beside several stale spellings of the UPN — which is the mess this
-    # exists to clean — and `WHERE user_id = :old_id` already sweeps all of them
-    # onto the same canonical values. Without this the later pairs re-issue an
-    # UPDATE that changes nothing and the returned count stops meaning anything.
-    done: set[tuple[str | None, str | None]] = set()
     for old_id, old_upn in pairs:
-        key = (old_id, None if old_id is not None else old_upn)
-        if key in done:
-            continue
-        done.add(key)
         match = next(
             (
-                directory[str(key).lower()]
-                for key in (old_id, old_upn)
-                if key and str(key).lower() in directory
+                directory[str(candidate).lower()]
+                for candidate in (old_id, old_upn)
+                if candidate and str(candidate).lower() in directory
             ),
             None,
         )
@@ -100,11 +95,28 @@ def _normalise(bind: sa.engine.Connection) -> int:
         new_upn = new_upn or old_upn
         if new_id == old_id and new_upn == old_upn:
             continue
-        params = {"new_id": new_id, "new_upn": new_upn}
+
+        params: dict[str, object] = {"new_id": new_id, "new_upn": new_upn}
+        where = []
         if old_id is None:
-            bind.execute(by_upn, {**params, "old_upn": old_upn})
+            where.append("user_id IS NULL")
         else:
-            bind.execute(by_id, {**params, "old_id": old_id})
+            where.append("user_id = :old_id")
+            params["old_id"] = old_id
+        if old_upn is None:
+            where.append("user_principal_name IS NULL")
+        else:
+            where.append("user_principal_name = :old_upn")
+            params["old_upn"] = old_upn
+
+        bind.execute(
+            sa.text(
+                "UPDATE fact_cowork_event "
+                "SET user_id = :new_id, user_principal_name = :new_upn "
+                "WHERE " + " AND ".join(where)
+            ),
+            params,
+        )
         updated += 1
     return updated
 

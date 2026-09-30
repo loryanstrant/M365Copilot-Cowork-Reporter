@@ -294,3 +294,48 @@ async def test_the_migration_re_keys_stored_rows_and_leaves_strangers_alone():
     assert rows["by-oid"] == (OID, UPN)
     assert rows["stranger"] == ("gone@elsewhere.com", "gone@elsewhere.com")
     assert rows["no-id"] == (OID, UPN)
+
+
+@pytest.mark.asyncio
+async def test_the_migration_addresses_a_pair_not_half_of_one():
+    """An object ID seen beside two different UPNs must not sweep both.
+
+    The identifiers in this table are inconsistent by assumption — that is the
+    premise of the whole change — so the migration does not get to treat one
+    half of a pair as reliable on its own. A statement derived from
+    (unknown-id, ada@…) must not also re-key (unknown-id, bob@…) onto Ada.
+    """
+    import importlib.util
+    from pathlib import Path
+
+    from sqlalchemy import select
+
+    from shared.db import engine
+
+    path = (
+        Path(__file__).resolve().parents[1]
+        / "alembic"
+        / "versions"
+        / "0007_normalise_event_identity.py"
+    )
+    spec = importlib.util.spec_from_file_location("_rev_0007_pairs", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    await _directory(OID, UPN)
+    await _directory("bob-oid", "bob@contoso.com")
+    # One object ID the directory has never heard of, carrying two people's
+    # UPNs. Contradictory, and exactly the shape this table is full of.
+    await _stored("ada-row", user_id="unknown-id", upn=UPN)
+    await _stored("bob-row", user_id="unknown-id", upn="bob@contoso.com")
+
+    async with engine.begin() as conn:
+        await conn.run_sync(lambda sync_conn: module._normalise(sync_conn))
+
+    async with SessionLocal() as s:
+        rows = {
+            r.event_id: (r.user_id, r.user_principal_name)
+            for r in (await s.execute(select(CoworkEvent))).scalars()
+        }
+    assert rows["ada-row"] == (OID, UPN)
+    assert rows["bob-row"] == ("bob-oid", "bob@contoso.com")
