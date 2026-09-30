@@ -791,11 +791,40 @@ def _json_array_len_default(element, compiler, **kw):
 
 @compiles(json_array_len, "postgresql")
 def _json_array_len_postgresql(element, compiler, **kw):
-    return "jsonb_array_length(%s)" % compiler.process(element.clauses, **kw)
+    """Array length, or 0 for anything that is not an array.
+
+    ``jsonb_array_length`` raises ``cannot get array length of a scalar`` on a
+    JSON ``null``, and the audit feed writes plenty of those: an event that
+    used no tools or touched no files stores the JSON value ``null`` rather
+    than leaving the column SQL NULL. On the tenant this was reported from, 25
+    of 80 rows held a JSON null in ``tools`` and 73 of 80 in
+    ``accessed_resources``.
+
+    That is a *scalar*, not SQL NULL, so a ``column IS NULL`` guard never sees
+    it. The executive briefing and the personal activity page both returned 500
+    against real data while every test passed — SQLite's ``json_array_length``
+    answers 0 for the same input instead of raising, and the seeder only ever
+    writes arrays.
+
+    Guarding in the compiler rather than at the call sites fixes the four
+    places that already count these lists at once, and stops a fifth
+    reintroducing it.
+    """
+    inner = compiler.process(element.clauses, **kw)
+    return (
+        f"CASE WHEN jsonb_typeof({inner}) = 'array' "
+        f"THEN jsonb_array_length({inner}) ELSE 0 END"
+    )
 
 
 def _json_len(column):
-    """0 for NULL, else the array length. NULL columns are the common case."""
+    """0 for NULL or a JSON null, else the array length.
+
+    Both are common: SQL NULL when the collector never saw the field, JSON
+    ``null`` when the audit record carried it as an explicit null. The first is
+    handled here, the second in the dialect compiler above — only the database
+    can tell what a JSON value actually is.
+    """
     return func.coalesce(
         case((column.is_(None), literal(0)), else_=json_array_len(column)), 0
     )
