@@ -43,6 +43,21 @@ def is_cowork_event(record: dict[str, Any]) -> bool:
     )
 
 
+def looks_like_upn(value: Any) -> bool:
+    """True when an identifier is a sign-in name rather than an object ID.
+
+    The audit ``UserId`` is not one identifier. Purview fills it with whichever
+    identity the interaction was recorded under, so the same tenant produces a
+    mixture: an Entra object ID for some rows, a UPN for others. Measured on the
+    live tenant, four of six distinct values were UPNs.
+
+    "Contains an @" is the whole test, deliberately. An object ID is a GUID and
+    never contains one, so the two shapes cannot be confused, and a stricter
+    address parser would only start rejecting identifiers we are being handed.
+    """
+    return "@" in str(value or "")
+
+
 def transform_cowork_event(record: dict[str, Any]) -> dict[str, Any] | None:
     """Map an audit record to a ``fact_cowork_event`` row dict."""
     audit = record.get("auditData") or {}
@@ -65,9 +80,15 @@ def transform_cowork_event(record: dict[str, Any]) -> dict[str, Any] | None:
         "event_id": str(event_id),
         "created_at": _parse_dt(record.get("createdDateTime"))
         or _parse_dt(audit.get("CreationTime")),
+        # Both identity columns are filled from whatever the audit row carried,
+        # but never with the wrong shape: a GUID must not be written into the
+        # UPN column just because the UPN was missing. It was, and every read
+        # path that joins on UPN then had a column of object IDs to step over.
+        # Resolving one identifier to the other needs the directory, so it
+        # happens in worker.ingest.resolve_event_identities, not here.
         "user_id": audit.get("UserId") or record.get("userId"),
         "user_principal_name": record.get("userPrincipalName")
-        or audit.get("UserId"),
+        or (audit.get("UserId") if looks_like_upn(audit.get("UserId")) else None),
         "operation": audit.get("Operation") or record.get("operation"),
         "app_host": ced.get("AppHost"),
         "app_identity": audit.get("AppIdentity"),

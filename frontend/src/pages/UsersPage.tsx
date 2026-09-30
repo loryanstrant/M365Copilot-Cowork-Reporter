@@ -91,18 +91,18 @@ export default function UsersPage() {
       <div>
         <h1 className="text-2xl font-bold">Tenant users</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          People who hold a Microsoft 365 Copilot licence and appear in the Cowork
-          report data. Someone with a licence and nothing against their name is
-          listed rather than hidden — that is the row worth finding. Click a header
-          to sort, type to filter.
+          Everyone who holds a Microsoft 365 Copilot licence, whether or not they
+          have ever used Cowork. Someone with a licence and nothing against their
+          name is listed with zeroes rather than hidden — that is the row worth
+          finding. Click a header to sort, type to filter.
         </p>
       </div>
 
       {loaded && users.length === 0 ? (
-        <Empty message="No licensed users found in the report data yet. Configure the app registration in Settings and run the collectors, then upload a Cowork usage report." />
+        <Empty message="No licensed users found. Configure the app registration in Settings and run the collectors — licences are read from the directory, so this fills in as soon as the user sync has run." />
       ) : (
         <ChartCard
-          title={`${fmtNumber(users.length)} licensed users in the data`}
+          title={`${fmtNumber(users.length)} licensed users`}
           subtitle={
             idle > 0
               ? `${fmtNumber(idle)} hold a licence with no recorded activity`

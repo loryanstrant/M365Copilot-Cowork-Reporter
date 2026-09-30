@@ -43,3 +43,45 @@ async def test_import_credit_consumption(session):
     row = await session.scalar(select(CreditConsumption))
     assert float(row.credits_consumed) == 250.5
     assert row.scope_type == "user"
+
+
+# --------------------------------------------------------------------------- #
+# Telling "no credits" apart from "we did not find the credits column"
+#
+# A tolerant parser fails silently: an unrecognised header reads exactly like a
+# column of zeroes, and the tenant gets a credit report of 0.0000 with no way
+# to know which it was. On the live tenant this produced six rows of zeroes and
+# cost an afternoon to diagnose from the database. The import now says so.
+# --------------------------------------------------------------------------- #
+@pytest.mark.asyncio
+async def test_an_unrecognised_credits_column_is_reported_not_silently_zero(session):
+    csv = (
+        b"User Principal Name,Display Name,Widgets Burned\n"
+        b"ada@contoso.com,Ada,42\n"
+    )
+    result = await import_credit_consumption(session, csv)
+    assert result["imported"] == 1
+    assert result["detail"] is not None
+    assert "Widgets Burned" in result["detail"]
+
+
+@pytest.mark.asyncio
+async def test_a_recognised_credits_column_reports_nothing(session):
+    csv = (
+        b"User Principal Name,Display Name,Credits Consumed\n"
+        b"ada@contoso.com,Ada,0\n"
+    )
+    result = await import_credit_consumption(session, csv)
+    assert result["detail"] is None, "a genuine zero is not a parsing problem"
+
+
+@pytest.mark.asyncio
+async def test_a_ragged_row_does_not_break_the_diagnostic(session):
+    """DictReader files surplus cells under a None key; the message must cope."""
+    csv = (
+        b"User Principal Name,Display Name\n"
+        b"ada@contoso.com,Ada,stray,cells\n"
+    )
+    result = await import_credit_consumption(session, csv)
+    assert result["imported"] == 1
+    assert "User Principal Name" in result["detail"]

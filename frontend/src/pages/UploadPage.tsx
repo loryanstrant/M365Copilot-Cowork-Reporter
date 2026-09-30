@@ -141,6 +141,15 @@ function UploadCard({
           Imported {result.imported} of {result.rows} rows ({result.skipped} skipped).
         </div>
       )}
+      {/* An import that parsed every row and understood none of the figures is
+          not a failure and not a success. It gets its own message, marked with
+          a word and a glyph rather than only a colour, because rows imported as
+          zero look exactly like a tenant that consumed nothing. */}
+      {result?.detail && (
+        <div className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          <span aria-hidden>⚠</span> Check this file: {result.detail}
+        </div>
+      )}
       {err && (
         <div className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{err}</div>
       )}

@@ -66,9 +66,9 @@ from.
 ### Tenant users
 
 The people this report is about: everyone holding a Microsoft 365 Copilot
-licence who appears in the Cowork data. Someone with a licence and nothing
-against their name is listed rather than hidden — that is the row worth
-finding.
+licence, whether or not they have ever used Cowork. Someone with a licence and
+nothing against their name is listed with zeroes rather than hidden — that is
+the row worth finding.
 
 ![Tenant users](docs/screenshots/tenant-users.png)
 
@@ -230,10 +230,11 @@ from the group takes effect in minutes rather than whenever their token next exp
 - **Overview** — headline KPIs across consumption and usage with trend since GA.
 - **Consumption** — Azure spend by resource group plus Copilot credit consumption.
 - **Usage** — Cowork tasks, active days and adoption per user.
-- **Tenant users** — everyone who holds a Copilot licence *and* appears in the Cowork data,
-  with what they have actually done. People with a licence and no activity are listed rather
-  than filtered out, because that is the row that answers "who are we paying for and getting
-  nothing from".
+- **Tenant users** — everyone who holds a Copilot licence, with what they have actually done.
+  Holding the licence is the only filter: someone who has never touched Cowork is listed with
+  zeroes, because that is the row that answers "who are we paying for and getting nothing
+  from". Licence is detected by service plan (see below), and a user whose licence has never
+  been determined is not counted as licensed.
 - **Scan history (admin)** — every collection run, newest first: scheduled, manual, historical
   backfills and both CSV uploads, with what each one wrote, how long it took and whether it
   succeeded. Failures show their error. This is what `job_runs` has recorded since the first
@@ -273,6 +274,21 @@ A `CopilotInteraction` audit record counts as Cowork when
 (both co-occur, alongside `AgentName == "Copilot Cowork"`). Audit answers *who / when /
 what-touched* — never task volume (use the usage CSV) or cost (use the cost and credits sources).
 **Prompt text is never stored.**
+
+### Who an audit event belongs to
+
+The audit `UserId` is not one identifier. Purview records whichever identity the interaction was
+made under, so a single tenant produces a mixture: an Entra object ID on some rows and a UPN on
+others. Left alone, that makes the event table's own key ambiguous and most rows unjoinable to
+the directory.
+
+So the collector **normalises on the way in**: each event's identifier is resolved against
+`dim_user`, and the row is stored with the directory's object ID in `user_id` and the directory's
+UPN in `user_principal_name`. An event whose identifier matches no directory user is stored as it
+arrived rather than dropped — it still happened, and it still counts towards the organisation's
+totals; a later directory sync will attach it to its person. Every read path matches on either
+key for exactly that reason, and migration `0007` applies the same normalisation once to rows
+collected before this existed.
 
 ## Prerequisites & permissions
 

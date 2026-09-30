@@ -19,7 +19,7 @@ from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from shared.config import settings
@@ -57,6 +57,12 @@ _EVENT_UPDATE_KEYS = [
 ]
 _USER_UPDATE_KEYS = [
     "has_copilot_license",
+    # Stamped on every sync so "when did the directory last return this person"
+    # is answerable. ON CONFLICT DO UPDATE does not fire the column's onupdate,
+    # so without this the timestamp records when a row was first inserted and
+    # nothing else — which is how a user carrying a NULL licence was left
+    # indistinguishable from one the sync had simply stopped returning.
+    "updated_at",
     "upn", "email", "display_name", "given_name", "surname", "job_title",
     "company_name", "department", "office_location", "city", "state", "country",
     "usage_location", "employee_id", "employee_type", "manager_id",
@@ -114,6 +120,89 @@ async def collect_costs(
     return {"subscriptions": len(subs), "rows": total_rows, "window_days": window}
 
 
+async def resolve_event_identities(
+    session: AsyncSession, rows: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Normalise audit identities against the directory, in place.
+
+    The audit ``UserId`` is a mixture — an Entra object ID on some rows, a UPN
+    on others, in the same tenant on the same day. Left as it arrives, the
+    natural key of ``fact_cowork_event`` is two different keys, and an event
+    stored under a UPN cannot join to ``dim_user`` at all: on the live tenant
+    only 15 of 80 events joined.
+
+    ``dim_user.user_id`` is the Entra object ID and is the key everything else
+    hangs off, so that is what we normalise *to*. Each row gets:
+
+    * ``user_id`` — the directory's object ID when the audit value matched a
+      directory user by either key;
+    * ``user_principal_name`` — the directory's UPN, so the UPN column holds
+      sign-in names and nothing else.
+
+    **An unmatched row is kept exactly as it arrived.** Dropping it would be
+    losing a fact: the interaction happened, and a person who has since left
+    the tenant, or a UPN the directory sync has not seen yet, is still usage
+    that belongs on the organisation's totals. It keeps its raw identifier,
+    the read paths still match it by UPN, and a later directory sync plus a
+    re-run of this resolution will attach it to its person.
+    """
+    if not rows:
+        return rows
+
+    wanted = {str(r["user_id"]).lower() for r in rows if r.get("user_id")}
+    wanted |= {
+        str(r["user_principal_name"]).lower()
+        for r in rows
+        if r.get("user_principal_name")
+    }
+    if not wanted:
+        return rows
+
+    directory = (
+        await session.execute(
+            select(DirectoryUser.user_id, DirectoryUser.upn).where(
+                or_(
+                    func.lower(DirectoryUser.user_id).in_(wanted),
+                    func.lower(DirectoryUser.upn).in_(wanted),
+                )
+            )
+        )
+    ).all()
+    by_key: dict[str, tuple[str, str | None]] = {}
+    for user_id, upn in directory:
+        if user_id:
+            by_key[user_id.lower()] = (user_id, upn)
+        if upn:
+            by_key[upn.lower()] = (user_id, upn)
+
+    for row in rows:
+        candidates = [row.get("user_id"), row.get("user_principal_name")]
+        matches = [
+            by_key[str(c).lower()] for c in candidates if c and str(c).lower() in by_key
+        ]
+        if not matches:
+            continue
+        # The two columns can name two different people. Purview's UserId is
+        # who the interaction was recorded against, and a record's own
+        # userPrincipalName can be someone else entirely — a delegated or
+        # on-behalf-of action. The audit UserId wins, because it is the field
+        # the audit log is keyed on, but a disagreement is worth a line in the
+        # log: it is the only visible sign that we chose between two people.
+        if len({m[0] for m in matches}) > 1:
+            logger.warning(
+                "Event %s names two directory users (%s vs %s); keying it on "
+                "the audit UserId.",
+                row.get("event_id"),
+                matches[0][0],
+                matches[1][0],
+            )
+        user_id, upn = matches[0]
+        row["user_id"] = user_id
+        if upn:
+            row["user_principal_name"] = upn
+    return rows
+
+
 async def collect_cowork_events(
     session: AsyncSession, client: ApiClient, config: AppConfig, now: datetime
 ) -> dict[str, Any]:
@@ -140,6 +229,7 @@ async def collect_cowork_events(
         if row:
             rows.append(row)
 
+    await resolve_event_identities(session, rows)
     inserted = await bulk_upsert(
         session, CoworkEvent, rows,
         index_elements=["event_id"], update_keys=_EVENT_UPDATE_KEYS,
@@ -195,10 +285,12 @@ async def collect_directory_users(
         batch = []
         return n
 
+    seen_at = now_utc()
     async for user in client.iter_directory_users():
         if not is_included_directory_user(user):
             continue
-        batch.append(transform_directory_user(user, granting))
+        row = transform_directory_user(user, granting)
+        batch.append({**row, "updated_at": seen_at})
         if len(batch) >= 500:
             count += await flush()
     count += await flush()

@@ -1,14 +1,14 @@
-"""The Tenant users listing: licensed AND present in the report data.
+"""The Tenant users listing: everyone who holds a Copilot licence.
 
 A directory dump is not the answer to "who is this report about". dim_user
-holds every member Graph returned, most of whom hold no Copilot licence and
-appear in no Cowork report, so listing them all buries the rows anyone came
-for.
+holds every member Graph returned, most of whom hold no Copilot licence, so
+listing them all buries the rows anyone came for.
 
-The rows that must survive the filter are the awkward ones: someone holding a
-licence who has done nothing. That is the row that answers "who are we paying
-for and getting nothing from", so "present in the data" deliberately means
-matched, not active.
+Holding the licence is the entire filter. It used to require a match in the
+usage or event facts as well, which removed precisely the rows the page exists
+to surface: someone holding a licence who has done nothing is what answers "who
+are we paying for and getting nothing from". Those people are listed with
+zeroes.
 """
 from __future__ import annotations
 
@@ -110,10 +110,19 @@ async def test_a_licensed_user_with_no_licence_is_excluded(client):
 
 
 @pytest.mark.asyncio
-async def test_a_licensed_user_absent_from_the_report_data_is_excluded(client):
-    """Licensed but never seen in any Cowork report — not what this page is for."""
+async def test_a_licensed_user_absent_from_the_report_data_is_still_listed(client):
+    """Licensed and never seen in any Cowork report — the row worth finding.
+
+    This page used to require a match in the usage or event facts as well, and
+    that cut exactly the people it exists to surface: on the tenant it was
+    changed for, 14 licensed users showed as 4. Holding the licence is the
+    whole filter; the activity columns are allowed to be zero.
+    """
     await _user("u1", "ada@contoso.com", "Ada", licensed=True)
-    assert await _listing(client) == {}
+    row = (await _listing(client))["ada@contoso.com"]
+    assert row["total_tasks"] == 0
+    assert row["cowork_events"] == 0
+    assert row["last_activity_date"] is None
 
 
 @pytest.mark.asyncio
@@ -126,6 +135,15 @@ async def test_an_undetermined_licence_is_not_treated_as_licensed(client):
     """
     await _user("u1", "ada@contoso.com", "Ada", licensed=None)
     await _usage("ada@contoso.com", 12)
+    assert await _listing(client) == {}
+
+
+@pytest.mark.asyncio
+async def test_an_unlicensed_user_is_excluded_however_much_they_used_cowork(client):
+    """Licence is the filter, not activity — the page is about what is paid for."""
+    await _user("u1", "guest@contoso.com", "Guest", licensed=False)
+    await _usage("guest@contoso.com", 99)
+    await _event("e1", upn="guest@contoso.com")
     assert await _listing(client) == {}
 
 
