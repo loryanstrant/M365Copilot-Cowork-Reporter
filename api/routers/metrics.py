@@ -266,26 +266,25 @@ async def usage_by_user(
 async def directory_users(
     session: AsyncSession = Depends(get_session),
 ) -> list[DirectoryUserOut]:
-    """The people this report is actually about: licensed, and in the data.
+    """The people this report is actually about: everyone with a licence.
 
     A directory dump is not a useful answer here. A tenant's dim_user holds
     every member Graph returned — most of whom have no Copilot licence and
-    appear nowhere in any Cowork report — so listing them all buries the few
-    hundred rows anyone came to look at under a few thousand they did not.
+    appear nowhere in any Cowork report — so listing them all buries the rows
+    anyone came to look at under a few thousand they did not.
 
-    So a row must be both:
+    The filter is therefore exactly one thing: **licensed** —
+    has_copilot_license is true. Note this is `is True`, not truthiness: NULL
+    means "never determined" (see migration 0005) and must not pass as licensed
+    on the strength of not being False.
 
-    * **licensed** — has_copilot_license is true. Note this is `is True`, not
-      truthiness: NULL means "never determined" (see migration 0005) and must
-      not pass as licensed on the strength of not being False.
-    * **present in the report data** — matched in fact_cowork_usage or
-      fact_cowork_event.
-
-    People with a licence and no activity are the rows worth finding, so
-    "present in the data" deliberately does not mean "did something". A person
-    matched with zero tasks and zero sessions is exactly the row that answers
-    "who are we paying for and not getting anything from", and it is listed
-    with its zeroes rather than filtered out.
+    It used to require a match in fact_cowork_usage or fact_cowork_event as
+    well, and that was the wrong cut. "Holds a licence and has never touched
+    Cowork" is the single most useful row on the page — it is what a renewal
+    turns on — and requiring a match in the report data removed precisely those
+    people. On the tenant this was changed for, it cut 14 licensed users to 4.
+    Someone with no activity is listed with zeroes, which is a finding rather
+    than an absence.
 
     UPN casing differs between the directory and the admin-centre exports, so
     every join is on lower(upn). Audit events carry the Entra object ID as well,
@@ -337,14 +336,7 @@ async def directory_users(
             events_by_oid.c.user_id == DirectoryUser.user_id,
             isouter=True,
         )
-        .where(
-            DirectoryUser.has_copilot_license.is_(True),
-            or_(
-                usage.c.upn.isnot(None),
-                events.c.upn.isnot(None),
-                events_by_oid.c.user_id.isnot(None),
-            ),
-        )
+        .where(DirectoryUser.has_copilot_license.is_(True))
         .order_by(DirectoryUser.display_name)
     )
     rows = (await session.execute(stmt)).all()

@@ -18,7 +18,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from shared.models import CoworkEvent, JobRun
 from shared.upsert import bulk_upsert
-from worker.ingest import IngestError, build_client, load_app_config
+from worker.ingest import (
+    IngestError,
+    build_client,
+    load_app_config,
+    resolve_event_identities,
+)
 from worker.ingest import _EVENT_UPDATE_KEYS  # reuse the same update column set
 from worker.transforms import is_cowork_event, transform_cowork_event
 
@@ -121,6 +126,10 @@ async def run_backfill(
                         row = transform_cowork_event(rec)
                         if row:
                             rows.append(row)
+                # Same normalisation the recurring collector applies: audit
+                # identities are a mixture, and a deep backfill is exactly
+                # where a column of two different keys gets established.
+                await resolve_event_identities(session, rows)
                 inserted = await bulk_upsert(
                     session, CoworkEvent, rows,
                     index_elements=["event_id"], update_keys=_EVENT_UPDATE_KEYS,

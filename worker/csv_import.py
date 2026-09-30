@@ -82,6 +82,32 @@ def _to_dt(value: Any) -> datetime | None:
     return datetime(d.year, d.month, d.day, tzinfo=timezone.utc) if d else None
 
 
+_CREDIT_COLUMNS = (
+    "Credits Consumed", "ConsumedCredits", "Consumed Credits",
+    "Credits", "Total Credits",
+)
+
+
+def _matched(rows: list[dict[str, str]], *candidates: str) -> str | None:
+    """The header this file actually used for a field, or None if it has none.
+
+    Parsing is deliberately tolerant of header-name variants, and the cost of
+    that tolerance is silence: a column we do not recognise reads exactly like
+    a column of zeroes. A tenant then gets a credits report of 0.0000 with no
+    indication whether that is the truth or a naming mismatch, which is worse
+    than an error — it is a wrong number presented as a finding.
+
+    So the import records which header it matched for the figures that matter.
+    "No column matched" and "matched, and the values were zero" are different
+    facts and the Scan history now tells them apart.
+    """
+    seen = {_norm(k): k for row in rows[:1] for k in row}
+    for cand in candidates:
+        if _norm(cand) in seen:
+            return seen[_norm(cand)]
+    return None
+
+
 def _read_rows(content: bytes) -> list[dict[str, str]]:
     text = content.decode("utf-8-sig", errors="replace")
     reader = csv.DictReader(io.StringIO(text))
@@ -145,7 +171,14 @@ async def import_cowork_usage(
         stats={"rows": len(rows), "imported": inserted, "skipped": skipped},
     ))
     await session.commit()
-    return {"rows": len(rows), "imported": inserted, "skipped": skipped}
+    # ``detail`` is part of the upload contract and the client types it as
+    # nullable, so it is returned explicitly rather than left undefined here.
+    return {
+        "rows": len(rows),
+        "imported": inserted,
+        "skipped": skipped,
+        "detail": None,
+    }
 
 
 # --- Credit consumption -------------------------------------------------
@@ -180,10 +213,7 @@ async def import_credit_consumption(
                                 "Service Name", "ServiceName"),
             "license_type": _pick(r, "License Type", "LicenseType", "Plan",
                                   "Billing Type") or "combined",
-            "credits_consumed": _to_float(
-                _pick(r, "Credits Consumed", "ConsumedCredits", "Consumed Credits",
-                      "Credits", "Total Credits")
-            ) or 0,
+            "credits_consumed": _to_float(_pick(r, *_CREDIT_COLUMNS)) or 0,
             "prepaid_consumed": _to_float(
                 _pick(r, "Prepaid Consumed", "PrepaidConsumed", "Prepaid")
             ),
@@ -205,11 +235,32 @@ async def import_credit_consumption(
             "paygo_consumed", "user_count", "last_activity_date", "source",
         ],
     )
+    credit_column = _matched(rows, *_CREDIT_COLUMNS)
+    headers = list(rows[0].keys()) if rows else []
     session.add(JobRun(
         job_name="csv-credit-consumption", status="success",
         finished_at=datetime.now(timezone.utc),
         stats={"rows": len(rows), "imported": inserted, "skipped": skipped,
-               "scope_type": scope_type},
+               "scope_type": scope_type,
+               # Recorded so a report of all zeroes can be told apart from a
+               # header this parser does not know. Header names only — no cell
+               # values, so nothing about any person is copied into job_runs.
+               "credit_column": credit_column,
+               "headers": headers},
     ))
     await session.commit()
-    return {"rows": len(rows), "imported": inserted, "skipped": skipped}
+    detail = None
+    if rows and credit_column is None:
+        detail = (
+            "No credits column was recognised in this file, so every row "
+            "imported as zero. The columns it contains are: "
+            + ", ".join(headers)
+            + ". Check this is the Copilot Credits export rather than another "
+            "report, and tell us the column name if it is."
+        )
+    return {
+        "rows": len(rows),
+        "imported": inserted,
+        "skipped": skipped,
+        "detail": detail,
+    }
