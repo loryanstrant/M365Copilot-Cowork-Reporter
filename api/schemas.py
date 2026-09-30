@@ -105,6 +105,26 @@ class JobRunOut(BaseModel):
     stats: dict | None = None
 
 
+class ScanRunOut(BaseModel):
+    """One row of the Scan history page.
+
+    Both the readable label and the raw value are returned for kind and status.
+    The page renders the label, but a kind this build has no label for has to
+    still show something, and the raw value is the only honest fallback.
+    """
+
+    id: int
+    kind: str
+    raw_kind: str
+    state: str
+    raw_status: str
+    started_at: str | None = None
+    finished_at: str | None = None
+    duration_seconds: int | None = None
+    error: str | None = None
+    stats: dict = {}
+
+
 class StatusOut(BaseModel):
     configured: bool
     last_run: JobRunOut | None = None
