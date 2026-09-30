@@ -86,8 +86,7 @@ and CSV uploads — with what each one wrote, how long it took and whether it
 worked. Failures show their error. Status is a shape plus a word (● ◐ ○), never
 colour alone.
 
-<!-- Screenshots pending: scan-history.png and scan-history-dark.png.
-     Route /scan-history, admin only, needs seeded demo data. -->
+![Scan history](docs/screenshots/scan-history.png)
 
 ### Consumption
 
