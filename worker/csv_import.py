@@ -236,7 +236,10 @@ async def import_credit_consumption(
         ],
     )
     credit_column = _matched(rows, *_CREDIT_COLUMNS)
-    headers = list(rows[0].keys()) if rows else []
+    # csv.DictReader files any surplus fields under a None key when a row has
+    # more cells than the header has names — a ragged export would otherwise
+    # break the message below on a None in the join.
+    headers = [str(k) for k in rows[0] if k is not None] if rows else []
     session.add(JobRun(
         job_name="csv-credit-consumption", status="success",
         finished_at=datetime.now(timezone.utc),

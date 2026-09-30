@@ -73,3 +73,15 @@ async def test_a_recognised_credits_column_reports_nothing(session):
     )
     result = await import_credit_consumption(session, csv)
     assert result["detail"] is None, "a genuine zero is not a parsing problem"
+
+
+@pytest.mark.asyncio
+async def test_a_ragged_row_does_not_break_the_diagnostic(session):
+    """DictReader files surplus cells under a None key; the message must cope."""
+    csv = (
+        b"User Principal Name,Display Name\n"
+        b"ada@contoso.com,Ada,stray,cells\n"
+    )
+    result = await import_credit_consumption(session, csv)
+    assert result["imported"] == 1
+    assert "User Principal Name" in result["detail"]
