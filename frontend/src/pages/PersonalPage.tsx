@@ -8,7 +8,6 @@ import type {
   MyEvent,
   MyStanding,
   MyTopItem,
-  PeerStat,
 } from "../api/types";
 import ActivityTimeline, {
   type TimelinePoint,
@@ -16,6 +15,7 @@ import ActivityTimeline, {
 import ChartCard from "../components/ChartCard";
 import Empty from "../components/Empty";
 import KpiCard from "../components/KpiCard";
+import PeerComparison from "../components/PeerComparison";
 import { CHART_COLORS } from "../components/chartTheme";
 import { fmtDate, fmtNumber } from "../lib/format";
 
@@ -154,7 +154,7 @@ export default function PersonalPage() {
             />
           </ChartCard>
 
-          {standing && <Standing standing={standing} />}
+          {standing && <PeerComparison standing={standing} />}
 
           <div className="grid gap-4 lg:grid-cols-2">
             <ChartCard
@@ -278,134 +278,6 @@ function RankedBars({
  * user, so putting a named colleague's figures here would hand everyone a
  * league table of people who never agreed to be in one.
  */
-function fmtPeriod(from: string | null, to: string | null, days: number): string {
-  if (!from || !to) return `the last ${days} days`;
-  const d = (iso: string) =>
-    new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, {
-      day: "numeric",
-      month: "short",
-    });
-  return `${d(from)} – ${d(to)}`;
-}
-
-/**
- * Why there is no team series, in the reader's terms.
- *
- * The two reasons are different facts about the tenant and only one of them is
- * fixable: a team below the disclosure floor will never be shown, whereas an
- * unknown team means nobody has populated departments and somebody could.
- * Collapsing them into "no team data" leaves an administrator with no idea
- * which of those they are looking at.
- */
-function teamWithheldNote(standing: MyStanding): string | null {
-  if (standing.team_state === "shown") return null;
-  if (standing.team_state === "too_small") {
-    const who =
-      standing.team_peers === 0
-        ? "you are the only person in it"
-        : `there ${standing.team_peers === 1 ? "is" : "are"} ${
-            standing.team_peers
-          } ${standing.team_peers === 1 ? "person" : "people"} in it besides you`;
-    return `Your team is too small to show — ${who}, and a team average is only shown from ${standing.min_team_peers}. Below that, the average and your own figure together would give an individual's number away.`;
-  }
-  return "We don't know which team you're in — your directory record has no department or manager, so there is nobody to compare you with.";
-}
-
-function Standing({ standing }: { standing: MyStanding }) {
-  const { team_label, org_percentile, org_people, stats } = standing;
-  const period = fmtPeriod(
-    standing.period_from,
-    standing.period_to,
-    standing.period_days,
-  );
-  const withheld = teamWithheldNote(standing);
-  return (
-    <ChartCard
-      title="How you compare"
-      subtitle={`${period} · ● you're in the top ${Math.max(
-        100 - org_percentile,
-        1,
-      )}% of the ${org_people.toLocaleString()} people in this organisation${
-        team_label ? `, and against ${team_label}` : ""
-      }`}
-    >
-      <div className="grid gap-6 md:grid-cols-3">
-        {stats.map((s) => (
-          <PeerBars key={s.label} stat={s} teamLabel={team_label} />
-        ))}
-      </div>
-      {withheld && (
-        <p className="mt-4 rounded-lg bg-slate-50 p-3 text-xs text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
-          {withheld}
-        </p>
-      )}
-      <p className="mt-4 text-xs text-slate-400 dark:text-slate-500">
-        Only medians are shown — never another individual's figures. Your
-        percentile is measured against the whole organisation, not your team.
-      </p>
-    </ChartCard>
-  );
-}
-
-function PeerBars({ stat, teamLabel }: { stat: PeerStat; teamLabel: string | null }) {
-  // Scale all three bars against the largest of them, so the comparison is
-  // honest: scaling each to its own width would make every row look equal.
-  const max = Math.max(stat.mine, stat.team_median, stat.org_median, 1);
-  const rows: { label: string; value: number; colour: string; suffix?: string }[] = [
-    { label: "You", value: stat.mine, colour: CHART_COLORS[0] },
-  ];
-  if (teamLabel) {
-    rows.push({
-      // The manager fallback already names itself a team ("Ping Lim's team"),
-      // so prefixing it again reads as "Your team · Ping Lim's team".
-      label: teamLabel.endsWith("'s team")
-        ? teamLabel
-        : `Your team · ${teamLabel}`,
-      value: stat.team_median,
-      colour: CHART_COLORS[1],
-      suffix: "median",
-    });
-  }
-  rows.push({
-    label: "Organisation",
-    value: stat.org_median,
-    colour: "#94a3b8",
-    suffix: "median",
-  });
-
-  return (
-    <div>
-      <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
-        {stat.label}
-      </div>
-      <div className="space-y-3">
-        {rows.map((r) => (
-          <div key={r.label}>
-            <div className="mb-1 flex items-center justify-between gap-2 text-xs">
-              <span className="truncate font-medium text-slate-700 dark:text-slate-200">
-                {r.label}
-              </span>
-              <span className="shrink-0 tabular-nums text-slate-500 dark:text-slate-400">
-                {fmtNumber(r.value)}
-                {r.suffix ? ` ${r.suffix}` : ""}
-              </span>
-            </div>
-            <div className="h-3 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700/60">
-              <div
-                className="h-3 rounded-full"
-                style={{
-                  width: `${Math.max((r.value / max) * 100, 2)}%`,
-                  backgroundColor: r.colour,
-                }}
-              />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 /**
  * The way through to organisation-wide reporting. When the user isn't allowed,
  * this is shown locked rather than hidden — otherwise people assume the feature
