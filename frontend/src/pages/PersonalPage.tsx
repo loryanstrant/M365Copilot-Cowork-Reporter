@@ -1,14 +1,5 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import { api } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import type {
@@ -19,12 +10,14 @@ import type {
   MyTopItem,
   PeerStat,
 } from "../api/types";
+import ActivityTimeline, {
+  type TimelinePoint,
+} from "../components/ActivityTimeline";
 import ChartCard from "../components/ChartCard";
-import ChartTooltip from "../components/ChartTooltip";
 import Empty from "../components/Empty";
 import KpiCard from "../components/KpiCard";
-import { CHART_COLORS, barGradId } from "../components/chartTheme";
-import { fmtDate, fmtDayShort, fmtNumber } from "../lib/format";
+import { CHART_COLORS } from "../components/chartTheme";
+import { fmtDate, fmtNumber } from "../lib/format";
 
 const DAYS = 30;
 
@@ -152,34 +145,13 @@ export default function PersonalPage() {
 
           <ChartCard
             title="Your sessions per day"
-            subtitle={`Cowork audit events, last ${DAYS} days`}
+            subtitle={`Cowork audit events, last ${DAYS} days, with a 7-day trailing average`}
           >
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={daily} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  vertical={false}
-                  className="stroke-slate-200 dark:stroke-slate-700"
-                />
-                <XAxis
-                  dataKey="day"
-                  tick={{ fontSize: 11 }}
-                  tickFormatter={(d: string) => fmtDayShort(d)}
-                  minTickGap={28}
-                />
-                <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                <Tooltip
-                  cursor={{ fill: "rgba(59,110,245,0.06)" }}
-                  content={<ChartTooltip />}
-                />
-                <Bar
-                  dataKey="sessions"
-                  name="Sessions"
-                  fill={`url(#${barGradId(0)})`}
-                  radius={[3, 3, 0, 0]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
+            <ActivityTimeline
+              points={daily as unknown as TimelinePoint[]}
+              dateKey="day"
+              series={[{ key: "sessions", label: "Sessions", colorIndex: 0 }]}
+            />
           </ChartCard>
 
           {standing && <Standing standing={standing} />}
