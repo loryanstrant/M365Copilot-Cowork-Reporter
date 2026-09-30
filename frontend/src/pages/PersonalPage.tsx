@@ -300,11 +300,13 @@ function fmtPeriod(from: string | null, to: string | null, days: number): string
 function teamWithheldNote(standing: MyStanding): string | null {
   if (standing.team_state === "shown") return null;
   if (standing.team_state === "too_small") {
-    return `Your team is too small to show — ${standing.team_peers} ${
-      standing.team_peers === 1 ? "person" : "people"
-    } besides you, and a team average is only shown from ${
-      standing.min_team_peers
-    }. Below that, the average and your own figure would give away an individual's number.`;
+    const who =
+      standing.team_peers === 0
+        ? "you are the only person in it"
+        : `there ${standing.team_peers === 1 ? "is" : "are"} ${
+            standing.team_peers
+          } ${standing.team_peers === 1 ? "person" : "people"} in it besides you`;
+    return `Your team is too small to show — ${who}, and a team average is only shown from ${standing.min_team_peers}. Below that, the average and your own figure together would give an individual's number away.`;
   }
   return "We don't know which team you're in — your directory record has no department or manager, so there is nobody to compare you with.";
 }

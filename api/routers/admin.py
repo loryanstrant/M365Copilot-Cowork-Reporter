@@ -203,8 +203,10 @@ async def seed_demo(reset: bool = True) -> IngestRunOut:
     return IngestRunOut(
         status="seeded",
         detail=(
-            f"Seeded {stats['cost_rows']} cost rows, {stats['events']} events, "
-            f"{stats['usage_rows']} usage rows, {stats['credit_rows']} credit rows."
+            f"Seeded {stats['people']} people, {stats['cost_rows']} cost rows, "
+            f"{stats['events']} events, {stats['usage_rows']} usage rows, "
+            f"{stats['credit_rows']} credit rows and {stats['job_rows']} "
+            f"collection runs."
         ),
     )
 

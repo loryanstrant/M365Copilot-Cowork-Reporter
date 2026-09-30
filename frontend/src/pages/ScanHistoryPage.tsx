@@ -65,11 +65,29 @@ const STAT_LABEL: Record<string, [string, string]> = {
   windows_done: ["window completed", "windows completed"],
 };
 
-/** The interesting numbers a run wrote, as a short phrase. */
+/**
+ * The interesting numbers a run wrote, as a short phrase.
+ *
+ * Zeros are kept. "0 windows completed" is the whole answer to "is this
+ * backfill actually doing anything", and dropping it made a stalled run look
+ * identical to one that never recorded the field.
+ *
+ * One kind of string survives the filter: the collectors write a *reason* into
+ * `skipped` when they had nothing to do ("no subscriptions configured"), and a
+ * successful run with no cost data and no explanation for it is the row most
+ * likely to be mistaken for a bug. The other strings in the blob are the
+ * backfill's ISO window bounds and the upload's scope, which the Started and
+ * Kind columns already convey.
+ */
 function fmtStats(stats: Record<string, unknown>): string {
   const parts = Object.entries(stats)
-    .filter(([, v]) => typeof v === "number" && v !== 0)
+    .filter(
+      ([k, v]) =>
+        typeof v === "number" ||
+        (typeof v === "string" && v !== "" && k.split(".").pop() === "skipped"),
+    )
     .map(([k, v]) => {
+      if (typeof v === "string") return v;
       const n = Number(v);
       const words = STAT_LABEL[k];
       const word = words

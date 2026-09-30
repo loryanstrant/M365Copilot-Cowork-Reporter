@@ -1064,18 +1064,34 @@ async def my_standing(
     # and can be larger. If neither clears it, no team series is drawn.
     team_label: str | None = None
     peers: list = []
+    # Whether a grouping was identified at all, which is a different question
+    # from whether it turned out to hold anybody. A department of one is a
+    # known department that is too small, not an unknown team, and the page
+    # tells the reader which — so this cannot be inferred from len(peers).
+    grouping_found = False
+
+    def _same(value: str | None, wanted: str) -> bool:
+        # Both sides stripped. Entra's department and manager fields are often
+        # hand-maintained, and a trailing space on one row would silently drop
+        # a real peer — which can push an adequate team under the floor.
+        return (value or "").strip() == wanted
+
     if mine is not None:
         dept = (mine.department or "").strip()
         if dept:
+            grouping_found = True
             peers = [
-                r for r in totals if r.department == dept and r.person != me_key
+                r for r in totals
+                if _same(r.department, dept) and r.person != me_key
             ]
             team_label = dept
         if len(peers) < MIN_TEAM_PEERS:
             mgr = (mine.manager_name or "").strip()
             if mgr:
+                grouping_found = True
                 mgr_peers = [
-                    r for r in totals if r.manager_name == mgr and r.person != me_key
+                    r for r in totals
+                    if _same(r.manager_name, mgr) and r.person != me_key
                 ]
                 # Only take the fallback if it is actually an improvement.
                 # Swapping a department of four for a manager group of two
@@ -1088,7 +1104,11 @@ async def my_standing(
     show_team = len(peers) >= MIN_TEAM_PEERS
     if show_team:
         team_state = "shown"
-    elif peers:
+    elif grouping_found:
+        # Includes a department of one. The department is on file; it is simply
+        # below the floor, and saying "we don't know your team" there would
+        # send an administrator hunting a data-quality problem that is not
+        # there. The spec calls this case out by name.
         team_state = "too_small"
     else:
         team_state = "unknown"
@@ -1129,8 +1149,13 @@ async def my_standing(
     # three come from the one filtered pass above, so they cannot disagree
     # about which period they describe — but the reader has no way of knowing
     # that unless the dates are on screen.
-    period_to = date.today()
-    period_from = period_to - timedelta(days=days - 1)
+    # Anchored on the same UTC instant _event_window filters from, not on the
+    # server's local calendar day. Those differ by up to a day outside UTC, and
+    # a panel whose stated dates disagree with the rows behind them is the
+    # exact confusion naming the period was meant to remove.
+    window_end = datetime.now(timezone.utc)
+    period_to = window_end.date()
+    period_from = (window_end - timedelta(days=days)).date()
 
     return MyStandingOut(
         team_label=team_label,

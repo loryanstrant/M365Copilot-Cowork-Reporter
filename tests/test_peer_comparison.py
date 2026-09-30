@@ -153,13 +153,52 @@ async def test_a_team_of_two_never_sends_the_figure(client):
 
 
 @pytest.mark.asyncio
-async def test_a_department_of_one_is_withheld_without_an_error(client):
+async def test_a_department_of_one_is_too_small_not_unknown(client):
+    """The department is on file. It is simply below the floor.
+
+    Reporting this as "we don't know your team" would send an administrator
+    hunting a data-quality problem that is not there, which is the whole reason
+    the two states are distinguished rather than collapsed into "no team".
+    """
     await _seed(peers_in_my_department=0)
 
     body = await _standing(client)
 
-    assert body["team_state"] == "unknown"
+    assert body["team_state"] == "too_small"
     assert body["team_label"] is None
+    assert body["team_peers"] == 0
+
+
+@pytest.mark.asyncio
+async def test_a_sole_report_to_a_manager_is_also_too_small(client):
+    """Same reasoning down the manager path, which had the same bug."""
+    await _seed(
+        peers_in_my_department=0, my_department=None, my_manager="Ping Lim",
+    )
+
+    body = await _standing(client)
+
+    assert body["team_state"] == "too_small"
+    assert body["team_peers"] == 0
+
+
+@pytest.mark.asyncio
+async def test_stray_whitespace_does_not_lose_a_peer(client):
+    """Entra's department field is hand-maintained often enough to matter.
+
+    A trailing space on one row would silently drop a real colleague, and
+    dropping one is enough to push a team of exactly five under the floor.
+    """
+    await _seed(peers_in_my_department=MIN_TEAM_PEERS)
+    async with SessionLocal() as s:
+        row = await s.get(DirectoryUser, "dept-0")
+        row.department = "Engineering "
+        await s.commit()
+
+    body = await _standing(client)
+
+    assert body["team_state"] == "shown"
+    assert body["team_peers"] == MIN_TEAM_PEERS
 
 
 @pytest.mark.asyncio
