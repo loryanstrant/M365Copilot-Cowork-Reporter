@@ -65,9 +65,19 @@ def test_every_kind_this_app_writes_has_a_label():
         assert kind in JOB_KIND_LABELS, kind
 
 
-def test_success_and_completed_are_one_state():
-    """They differ only by which module wrote the row, not by meaning."""
-    assert JOB_STATUS_STATE["success"] == JOB_STATUS_STATE["completed"] == "succeeded"
+def test_the_three_spellings_of_success_are_one_state():
+    """Three words for one state, across four apps built from one template.
+
+    This app writes only "success". The other two are carried so a row written
+    by a sibling against the same schema still reads as Succeeded rather than
+    as a third status nobody has a shape for.
+    """
+    assert (
+        JOB_STATUS_STATE["success"]
+        == JOB_STATUS_STATE["completed"]
+        == JOB_STATUS_STATE["complete"]
+        == "succeeded"
+    )
     assert JOB_STATUS_STATE["running"] == JOB_STATUS_STATE["preparing"] == "running"
 
 

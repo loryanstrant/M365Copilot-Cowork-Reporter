@@ -18,14 +18,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from shared.models import JobRun
 
-# ``job_runs.job_name`` is not an enum and never was. This app writes five
-# values — "scheduled" from the worker's timer, "manual" from Run now,
-# "backfill" from the historical audit pull, and the two "csv-*" kinds from the
-# upload path, which no other report in the suite has.
+# ``job_runs.job_name`` is not an enum and never was, and the set it holds
+# differs per repo — so this is a per-repo superset rather than a shared
+# constant. This app writes five values: "scheduled" from the worker's timer,
+# "manual" from Run now, "backfill" from the historical audit pull, and the two
+# "csv-*" kinds from the upload path, which no other report in the suite has.
+# It never writes "daily" or "users".
 #
-# The three that follow are written by sibling reports against the same schema
-# shape ("daily" and "users" in Usage Reporter, which also has rows carrying
-# "scheduled"). They are mapped here anyway: the cost of carrying a label for a
+# Those two are Usage Reporter's, which also has production rows carrying
+# "scheduled". They are mapped here anyway: the cost of carrying a label for a
 # kind this app never writes is one dictionary line, and the cost of not
 # carrying it is a row rendering as a raw string in whichever app is first to
 # share a database.
@@ -44,13 +45,17 @@ JOB_KIND_LABELS = {
     "csv-credit-consumption": "Credit CSV upload",
 }
 
-# Six status values exist across the suite. "success" and "completed" mean the
-# same thing and differ only by which module wrote the row; "preparing" is a
-# backfill that has not started its first window yet. The display layer absorbs
-# all of that, and this is the one place the mapping is decided.
+# Seven status values exist across the suite, three of which are spellings of
+# the same thing: "success", "completed" and "complete" all mean it worked and
+# differ only by which module wrote the row — three words for one state, across
+# four applications built from one template. ("preparing" is a backfill that has
+# not started its first window yet.) This app writes only "success"; the rest
+# are carried for the same reason the sibling job kinds are. The display layer
+# absorbs all of it, and this is the one place the mapping is decided.
 JOB_STATUS_STATE = {
     "success": "succeeded",
     "completed": "succeeded",
+    "complete": "succeeded",
     "running": "running",
     "preparing": "running",
     "failed": "failed",
