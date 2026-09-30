@@ -19,8 +19,10 @@ export interface PeerStatShape {
   /** Median across the viewer's peers. Zero when the team is withheld. */
   team_median: number;
   org_median: number;
-  team_people: number;
-  org_people: number;
+  // Carried by every endpoint in the suite but not read here. Optional so a
+  // port is not forced to invent them to satisfy a component that ignores them.
+  team_people?: number;
+  org_people?: number;
 }
 
 export interface PeerStandingShape {
@@ -55,6 +57,17 @@ export interface PeerMeasure {
   /** Shown instead, when the API's word is not the product's word. */
   as?: string;
 }
+
+// Written out rather than interpolated, because Tailwind scans source for
+// literal class names and a computed `md:grid-cols-${n}` is not in the build.
+// Three is Cowork's measure count, not a property of the component — a report
+// comparing two measures or four should not get an orphan on its own row.
+const COLUMNS: Record<number, string> = {
+  1: "md:grid-cols-1",
+  2: "md:grid-cols-2",
+  3: "md:grid-cols-3",
+  4: "md:grid-cols-4",
+};
 
 function fmtPeriod(from: string | null, to: string | null, days: number): string {
   if (!from || !to) return `the last ${days} days`;
@@ -111,14 +124,25 @@ export default function PeerComparison({
 }) {
   const { team_label, org_percentile, org_people, stats } = standing;
 
-  const shown: { stat: PeerStatShape; label: string }[] = measures
+  // Carries its own key: the stat's own label is not unique once `measures`
+  // can select the same measure twice under two names, which the prop allows.
+  const shown: { stat: PeerStatShape; label: string; key: string }[] = measures
     ? measures
-        .map((m) => {
+        .map((m, i) => {
           const stat = stats.find((s) => s.label === m.label);
-          return stat ? { stat, label: m.as ?? stat.label } : null;
+          return stat
+            ? { stat, label: m.as ?? stat.label, key: `${m.label}-${i}` }
+            : null;
         })
-        .filter((x): x is { stat: PeerStatShape; label: string } => x !== null)
-    : stats.map((stat) => ({ stat, label: stat.label }));
+        .filter(
+          (x): x is { stat: PeerStatShape; label: string; key: string } =>
+            x !== null,
+        )
+    : stats.map((stat, i) => ({
+        stat,
+        label: stat.label,
+        key: `${stat.label}-${i}`,
+      }));
 
   const period = fmtPeriod(
     standing.period_from,
@@ -137,10 +161,10 @@ export default function PeerComparison({
         team_label ? `, and against ${team_label}` : ""
       }`}
     >
-      <div className="grid gap-6 md:grid-cols-3">
-        {shown.map(({ stat, label }) => (
+      <div className={`grid gap-6 ${COLUMNS[Math.min(shown.length, 4) || 1]}`}>
+        {shown.map(({ stat, label, key }) => (
           <PeerBars
-            key={stat.label}
+            key={key}
             stat={stat}
             label={label}
             teamLabel={standing.team_state === "shown" ? team_label : null}
