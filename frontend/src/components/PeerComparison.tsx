@@ -122,7 +122,13 @@ export default function PeerComparison({
   measures?: PeerMeasure[];
   title?: string;
 }) {
-  const { team_label, org_percentile, org_people, stats } = standing;
+  const { org_percentile, org_people, stats } = standing;
+  // One gate for the whole card. The server already nulls the label and zeroes
+  // the figures when it withholds a team, so this is belt and braces — but the
+  // point of a gate is not to depend on that, and applying it to the bars and
+  // not to the subtitle would leave the card able to name a team it is not
+  // showing, directly contradicting the note underneath.
+  const teamLabel = standing.team_state === "shown" ? standing.team_label : null;
 
   // Carries its own key: the stat's own label is not unique once `measures`
   // can select the same measure twice under two names, which the prop allows.
@@ -158,7 +164,7 @@ export default function PeerComparison({
         100 - org_percentile,
         1,
       )}% of the ${org_people.toLocaleString()} people in this organisation${
-        team_label ? `, and against ${team_label}` : ""
+        teamLabel ? `, and against ${teamLabel}` : ""
       }`}
     >
       <div className={`grid gap-6 ${COLUMNS[Math.min(shown.length, 4) || 1]}`}>
@@ -167,7 +173,7 @@ export default function PeerComparison({
             key={key}
             stat={stat}
             label={label}
-            teamLabel={standing.team_state === "shown" ? team_label : null}
+            teamLabel={teamLabel}
           />
         ))}
       </div>
@@ -193,9 +199,17 @@ function PeerBars({
   label: string;
   teamLabel: string | null;
 }) {
-  // Scale all three bars against the largest of them, so the comparison is
-  // honest: scaling each to its own width would make every row look equal.
-  const max = Math.max(stat.mine, stat.team_median, stat.org_median, 1);
+  // Scale all bars against the largest of them, so the comparison is honest:
+  // scaling each to its own width would make every row look equal. A withheld
+  // team is excluded from that maximum — the server sends it as zero so today
+  // it changes nothing, but a team figure that silently set the scale would be
+  // leaking through the axis a number we declined to print.
+  const max = Math.max(
+    stat.mine,
+    teamLabel ? stat.team_median : 0,
+    stat.org_median,
+    1,
+  );
   const rows: { label: string; value: number; colour: string; suffix?: string }[] = [
     { label: "You", value: stat.mine, colour: CHART_COLORS[0] },
   ];
