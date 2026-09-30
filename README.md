@@ -216,8 +216,12 @@ from the group takes effect in minutes rather than whenever their token next exp
   sessions, average tools and files per day, active days, a per-day chart with a seven-day
   trailing average, how you compare with your team and with the organisation, and your
   most-used agents and tools. Comparisons return medians and a percentile only — never
-  another individual's figures, and the team series is **withheld entirely below five peers**
-  because below that the team figure and your own would give a colleague's number away. The
+  another individual's figures, and a series is **withheld entirely below five peers** —
+  the team *and* the organisation, because the arithmetic that makes a small group
+  disclosing does not care what the group is called, and in a four-person pilot tenant the
+  organisation average gives a colleague away exactly as a small team would. Your ranking is
+  withheld with it, since a rank is a statement about the same group. Your own figures are
+  always shown, with a sentence explaining what is missing and why. The
   panel names the period it covers and states that your percentile is measured against the
   organisation rather than your team. Shown to anyone signed in with a work account.
 - **Executive briefing** — the last 30 days against the 30 before them: sessions, tools, files,

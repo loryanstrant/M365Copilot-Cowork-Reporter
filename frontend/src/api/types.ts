@@ -223,8 +223,16 @@ export interface MyStanding {
   period_days: number;
   period_from: string | null;
   period_to: string | null;
-  /** Measured against the organisation, never the team. */
-  org_percentile: number;
+  /**
+   * The organisation answers to the same floor as the team — the arithmetic
+   * does not care what the group is called. No "unknown": the organisation is
+   * always known, it is just sometimes too small to draw.
+   */
+  organisation_state: "shown" | "too_small";
+  /** People besides the viewer. Non-zero even when withheld. */
+  org_peers: number;
+  /** Measured against the organisation, never the team. Null when withheld. */
+  org_percentile: number | null;
   org_people: number;
   stats: PeerStat[];
 }

@@ -304,6 +304,8 @@ class PeerStatOut(BaseModel):
     # the bar answers "how do I compare with the rest of my team" rather than
     # being dragged toward the viewer's own figure. Zero when withheld.
     team_median: int
+    # Zero when the organisation is below the disclosure floor too. `mine` is
+    # always sent: the viewer's own figures are never a disclosure.
     org_median: int
     team_people: int = 0
     org_people: int = 0
@@ -331,11 +333,23 @@ class MyStandingOut(BaseModel):
     period_days: int = 30
     period_from: date | None = None
     period_to: date | None = None
+    # The organisation series answers to the same floor as the team. The
+    # arithmetic that makes a small team disclosing does not care what the
+    # group is called: in a four-person pilot tenant, the organisation average
+    # and the viewer's own figure narrow an individual exactly as a team of
+    # four would. "shown" | "too_small" — there is no "unknown" here, because
+    # the organisation is always known.
+    organisation_state: str = "shown"
+    # People besides the viewer. Reported even when withheld, so the page can
+    # explain rather than just omit a bar.
+    org_peers: int = 0
     # 0-100, measured against the organisation and never against the team: in a
     # team of four a team-relative percentile says more about the size of the
-    # team than about the person. org_people carries the population so the page
-    # can state what it was measured against.
-    org_percentile: int = 0
+    # team than about the person.
+    #
+    # None when the organisation is withheld. A rank left standing after the
+    # series it was measured against has gone discloses by another route.
+    org_percentile: int | None = None
     org_people: int = 0
     stats: list[PeerStatOut] = []
 

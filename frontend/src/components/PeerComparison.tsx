@@ -18,6 +18,7 @@ export interface PeerStatShape {
   mine: number;
   /** Median across the viewer's peers. Zero when the team is withheld. */
   team_median: number;
+  /** Zero when the organisation is withheld too. */
   org_median: number;
   // Carried by every endpoint in the suite but not read here. Optional so a
   // port is not forced to invent them to satisfy a component that ignores them.
@@ -45,7 +46,16 @@ export interface PeerStandingShape {
   period_days: number;
   period_from: string | null;
   period_to: string | null;
-  org_percentile: number;
+  /**
+   * The organisation answers to the same disclosure floor as the team. There
+   * is no "unknown" here — the organisation is always known, it is just
+   * sometimes too small to draw without giving an individual away.
+   */
+  organisation_state: "shown" | "too_small";
+  /** People besides the viewer. Non-zero even when withheld. */
+  org_peers: number;
+  /** Null when the organisation series is withheld; the rank goes with it. */
+  org_percentile: number | null;
   org_people: number;
   stats: PeerStatShape[];
 }
@@ -104,6 +114,26 @@ export function teamWithheldNote(standing: PeerStandingShape): string | null {
 }
 
 /**
+ * Why there is no organisation series.
+ *
+ * Only one reason exists, unlike the team: the organisation is always known,
+ * it is simply sometimes too small to draw. A four-person pilot tenant gives
+ * an individual away through its own average exactly as a team of four does.
+ */
+export function organisationWithheldNote(
+  standing: PeerStandingShape,
+): string | null {
+  if (standing.organisation_state === "shown") return null;
+  const who =
+    standing.org_peers === 0
+      ? "you are the only person in it"
+      : `there ${standing.org_peers === 1 ? "is" : "are"} ${standing.org_peers} ${
+          standing.org_peers === 1 ? "person" : "people"
+        } in it besides you`;
+  return `This organisation is too small to compare against — ${who}, and an average is only shown from ${standing.min_team_peers}. Your own figures are shown in full; only the comparison and your ranking are held back.`;
+}
+
+/**
  * You, your team and the organisation, on the same measures over one window.
  *
  * Only medians are rendered, and a withheld team arrives already zeroed from
@@ -129,6 +159,7 @@ export default function PeerComparison({
   // not to the subtitle would leave the card able to name a team it is not
   // showing, directly contradicting the note underneath.
   const teamLabel = standing.team_state === "shown" ? standing.team_label : null;
+  const showOrg = standing.organisation_state === "shown";
 
   // Carries its own key: the stat's own label is not unique once `measures`
   // can select the same measure twice under two names, which the prop allows.
@@ -155,17 +186,24 @@ export default function PeerComparison({
     standing.period_to,
     standing.period_days,
   );
-  const withheld = teamWithheldNote(standing);
+  const notes = [teamWithheldNote(standing), organisationWithheldNote(standing)]
+    .filter((n): n is string => n !== null);
 
   return (
     <ChartCard
       title={title}
-      subtitle={`${period} · ● you're in the top ${Math.max(
-        100 - org_percentile,
-        1,
-      )}% of the ${org_people.toLocaleString()} people in this organisation${
-        teamLabel ? `, and against ${teamLabel}` : ""
-      }`}
+      subtitle={
+        showOrg && org_percentile !== null
+          ? `${period} · ● you're in the top ${Math.max(
+              100 - org_percentile,
+              1,
+            )}% of the ${org_people.toLocaleString()} people in this organisation${
+              teamLabel ? `, and against ${teamLabel}` : ""
+            }`
+          : `${period} · ● your own activity${
+              teamLabel ? `, and against ${teamLabel}` : ""
+            }`
+      }
     >
       <div className={`grid gap-6 ${COLUMNS[Math.min(shown.length, 4) || 1]}`}>
         {shown.map(({ stat, label, key }) => (
@@ -174,17 +212,23 @@ export default function PeerComparison({
             stat={stat}
             label={label}
             teamLabel={teamLabel}
+            showOrg={showOrg}
           />
         ))}
       </div>
-      {withheld && (
-        <p className="mt-4 rounded-lg bg-slate-50 p-3 text-xs text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
-          {withheld}
+      {notes.map((note) => (
+        <p
+          key={note}
+          className="mt-4 rounded-lg bg-slate-50 p-3 text-xs text-slate-500 dark:bg-slate-800/60 dark:text-slate-400"
+        >
+          {note}
         </p>
-      )}
+      ))}
       <p className="mt-4 text-xs text-slate-400 dark:text-slate-500">
-        Only medians are shown — never another individual's figures. Your
-        percentile is measured against the whole organisation, not your team.
+        Only medians are shown — never another individual's figures.
+        {showOrg
+          ? " Your percentile is measured against the whole organisation, not your team."
+          : ""}
       </p>
     </ChartCard>
   );
@@ -194,10 +238,12 @@ function PeerBars({
   stat,
   label,
   teamLabel,
+  showOrg,
 }: {
   stat: PeerStatShape;
   label: string;
   teamLabel: string | null;
+  showOrg: boolean;
 }) {
   // Scale all bars against the largest of them, so the comparison is honest:
   // scaling each to its own width would make every row look equal. A withheld
@@ -207,7 +253,7 @@ function PeerBars({
   const max = Math.max(
     stat.mine,
     teamLabel ? stat.team_median : 0,
-    stat.org_median,
+    showOrg ? stat.org_median : 0,
     1,
   );
   const rows: { label: string; value: number; colour: string; suffix?: string }[] = [
@@ -223,12 +269,14 @@ function PeerBars({
       suffix: "median",
     });
   }
-  rows.push({
-    label: "Organisation",
-    value: stat.org_median,
-    colour: "#94a3b8",
-    suffix: "median",
-  });
+  if (showOrg) {
+    rows.push({
+      label: "Organisation",
+      value: stat.org_median,
+      colour: "#94a3b8",
+      suffix: "median",
+    });
+  }
 
   return (
     <div>

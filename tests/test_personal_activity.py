@@ -298,13 +298,22 @@ async def test_standing_omits_the_team_when_it_cannot_be_identified(client):
 
 @pytest.mark.asyncio
 async def test_the_percentile_puts_the_busiest_person_at_the_top(client):
+    """Six people, because a percentile needs an organisation it may be shown for.
+
+    The organisation now answers to the same disclosure floor as the team, so
+    a two-person fixture gets no percentile at all — correctly, since a rank
+    within a pair is a statement about the other person.
+    """
     await _person(ME_OID, ME_UPN, "Ada", dept="Engineering")
-    await _person("t1", "t1@contoso.com", "Quiet", dept="Engineering")
     await _event("me1")
     await _event("me2")
-    await _event("t1a", oid="t1")
+    for i in range(5):
+        await _person(f"q{i}", f"q{i}@contoso.com", f"Quiet {i}", dept="Engineering")
+        await _event(f"q{i}a", oid=f"q{i}")
     body = (await client.get("/metrics/me/standing", headers=_me())).json()
-    assert body["org_percentile"] == 50  # did more than 1 of 2 people counted
+    assert body["organisation_state"] == "shown"
+    # Did more than five of the six people counted.
+    assert body["org_percentile"] == 83
 
 
 @pytest.mark.asyncio
@@ -312,9 +321,10 @@ async def test_the_percentile_is_zero_when_everyone_is_level(client):
     """Ties count as "not more than", so level pegging is 0 rather than a
     flattering middle."""
     await _person(ME_OID, ME_UPN, "Ada", dept="Engineering")
-    await _person("t1", "t1@contoso.com", "Same", dept="Engineering")
     await _event("me1")
-    await _event("t1a", oid="t1")
+    for i in range(5):
+        await _person(f"s{i}", f"s{i}@contoso.com", f"Same {i}", dept="Engineering")
+        await _event(f"s{i}a", oid=f"s{i}")
     body = (await client.get("/metrics/me/standing", headers=_me())).json()
     assert body["org_percentile"] == 0
 

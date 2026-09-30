@@ -212,7 +212,13 @@ export default function ScanHistoryPage() {
           getRowKey={(r) => r.id}
           initialSort={{ key: "started_at", dir: "desc" }}
           filterable
-          maxBodyHeight={620}
+          // Viewport-relative, with a floor. A flat pixel cap put nine of
+          // nineteen rows behind an inner scrollbar on a tall window — on the
+          // one page whose job is surfacing failed runs, that hid the failure.
+          // The floor matters as much as the cap: a bare calc() goes negative
+          // on a short window, and a negative max-height clamps to zero, which
+          // collapses the table to nothing.
+          maxBodyHeight="max(240px, calc(100vh - 17rem))"
           emptyMessage="Nothing has run yet. Open Settings and use Run now, or wait for the next scheduled collection."
         />
       </ChartCard>

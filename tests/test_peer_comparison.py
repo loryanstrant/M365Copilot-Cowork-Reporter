@@ -246,6 +246,95 @@ async def test_falling_back_to_a_group_that_is_also_too_small_still_withholds(cl
 
 
 @pytest.mark.asyncio
+async def test_a_tenant_below_the_floor_withholds_the_organisation_too(client):
+    """The arithmetic does not care what the group is called.
+
+    In a four-person pilot the organisation average plus the viewer's own
+    figure narrows an individual exactly as a team of four would, and this
+    endpoint used to draw it regardless of size.
+    """
+    async with SessionLocal() as s:
+        await _person(s, user_id=ME, upn=MY_UPN, department="Engineering", sessions=9)
+        for i in range(3):
+            await _person(
+                s, user_id=f"tiny-{i}", upn=f"tiny{i}@contoso.com",
+                department="Engineering", sessions=2,
+            )
+        await s.commit()
+
+    body = await _standing(client)
+
+    assert body["organisation_state"] == "too_small"
+    assert body["org_peers"] == 3
+    # Withheld at the endpoint, not hidden by the page.
+    assert all(st["org_median"] == 0 for st in body["stats"])
+    assert all(st["org_people"] == 0 for st in body["stats"])
+
+
+@pytest.mark.asyncio
+async def test_the_rank_goes_with_the_series_it_was_measured_against(client):
+    """Leaving a percentile behind would disclose by another route.
+
+    "You are in the top 25% of four people" is a statement about the same small
+    group the bar was withheld for.
+    """
+    async with SessionLocal() as s:
+        await _person(s, user_id=ME, upn=MY_UPN, department="Engineering", sessions=9)
+        for i in range(2):
+            await _person(
+                s, user_id=f"tiny-{i}", upn=f"tiny{i}@contoso.com",
+                department="Engineering", sessions=1,
+            )
+        await s.commit()
+
+    body = await _standing(client)
+
+    assert body["organisation_state"] == "too_small"
+    assert body["org_percentile"] is None
+
+
+@pytest.mark.asyncio
+async def test_a_small_tenant_still_sees_its_own_figures(client):
+    """Never a blank card. Your own numbers are not a disclosure."""
+    async with SessionLocal() as s:
+        await _person(s, user_id=ME, upn=MY_UPN, department="Engineering", sessions=7)
+        await _person(
+            s, user_id="only-other", upn="other@contoso.com",
+            department="Engineering", sessions=1,
+        )
+        await s.commit()
+
+    body = await _standing(client)
+
+    sessions = next(st for st in body["stats"] if st["label"] == "Sessions")
+    assert sessions["mine"] == 7
+    assert body["stats"], "the panel must still carry the viewer's own measures"
+    # The population count is a count, not a figure about a person, so it is
+    # still reported — it is what lets the page explain the omission.
+    assert body["org_people"] == 2
+
+
+@pytest.mark.asyncio
+async def test_the_organisation_shows_at_the_floor(client):
+    """Five peers besides the viewer is enough, here as for the team."""
+    async with SessionLocal() as s:
+        await _person(s, user_id=ME, upn=MY_UPN, department="Engineering", sessions=9)
+        for i in range(MIN_TEAM_PEERS):
+            await _person(
+                s, user_id=f"org-{i}", upn=f"org{i}@contoso.com",
+                department=f"Dept {i}", sessions=2,
+            )
+        await s.commit()
+
+    body = await _standing(client)
+
+    assert body["organisation_state"] == "shown"
+    assert body["org_peers"] == MIN_TEAM_PEERS
+    assert body["org_percentile"] is not None
+    assert all(st["org_median"] > 0 for st in body["stats"])
+
+
+@pytest.mark.asyncio
 async def test_the_panel_is_told_the_period_and_the_population(client):
     await _seed(peers_in_my_department=MIN_TEAM_PEERS)
 

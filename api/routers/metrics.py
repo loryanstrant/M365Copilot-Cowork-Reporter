@@ -1115,19 +1115,31 @@ async def my_standing(
     if not show_team:
         team_label = None
 
+    # The same floor applies to the organisation. The arithmetic that makes a
+    # small team disclosing does not care what the group is called: in a
+    # four-person pilot tenant, the Organisation bar plus the viewer's own
+    # figure narrows an individual exactly as a team of four would, and this
+    # endpoint was drawing it.
+    org_peers = [r for r in totals if r.person != me_key]
+    show_org = len(org_peers) >= MIN_TEAM_PEERS
+    organisation_state = "shown" if show_org else "too_small"
+
     def _stat(label: str, attr: str) -> PeerStatOut:
         org_values = [int(getattr(r, attr) or 0) for r in totals]
         peer_values = [int(getattr(r, attr) or 0) for r in peers]
         return PeerStatOut(
             label=label,
+            # The viewer's own figures are never a disclosure and are always
+            # sent, so a person in a tenant too small to compare against still
+            # gets a page with their numbers on it rather than an empty card.
             mine=int(getattr(mine, attr) or 0) if mine is not None else 0,
             # Withheld means withheld: the figure is not sent and then hidden
             # by the page, because a number that reaches the browser has been
             # disclosed whatever the page does with it.
             team_median=_median(peer_values) if show_team else 0,
-            org_median=_median(org_values),
+            org_median=_median(org_values) if show_org else 0,
             team_people=len(peers) if show_team else 0,
-            org_people=len(org_values),
+            org_people=len(org_values) if show_org else 0,
         )
 
     # Percentile on sessions: the share of counted people this person did more
@@ -1137,13 +1149,19 @@ async def my_standing(
     # Measured across every counted person — the organisation — never across
     # the team. In a team of six, a team-relative percentile moves in steps of
     # 17 points and says more about the size of the team than the person.
+    #
+    # It goes when the organisation series goes. A rank left standing after the
+    # series it was measured against has been withheld discloses by another
+    # route — "you are in the top 25% of four people" is a statement about the
+    # same small group, and withholding the bar while keeping the ranking would
+    # be theatre rather than a rule.
     sessions = [int(r.sessions or 0) for r in totals]
     my_sessions = int(mine.sessions or 0) if mine is not None else 0
-    percentile = (
-        round(100 * sum(1 for v in sessions if v < my_sessions) / len(sessions))
-        if sessions
-        else 0
-    )
+    percentile: int | None = None
+    if show_org and sessions:
+        percentile = round(
+            100 * sum(1 for v in sessions if v < my_sessions) / len(sessions)
+        )
 
     # The window every series was computed over, so the panel can name it. All
     # three come from the one filtered pass above, so they cannot disagree
@@ -1165,7 +1183,12 @@ async def my_standing(
         period_days=days,
         period_from=period_from,
         period_to=period_to,
+        organisation_state=organisation_state,
+        org_peers=len(org_peers),
         org_percentile=percentile,
+        # The population size itself is a count rather than a figure about any
+        # person, so it is sent either way — it is what lets the page explain
+        # that the organisation is too small instead of just omitting a bar.
         org_people=len(totals),
         stats=[
             _stat("Sessions", "sessions"),
