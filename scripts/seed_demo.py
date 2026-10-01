@@ -20,6 +20,7 @@ from sqlalchemy import delete
 # "python -m scripts.seed_demo" — the README tells them the plain form.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from scripts._demo_tenant import DOMAIN
 from shared.db import SessionLocal
 from shared.demo import bind_demo_persona, retire_demo_persona
 from shared.migrate import upgrade_to_head
@@ -38,12 +39,12 @@ from shared.models import (
 # first three as business owners, and the demo persona binds the local admin to
 # index 0 so the personal pages are reachable without Entra.
 _NAMED_USERS = [
-    ("loryan.strant@avanoso.com", "Loryan Strant"),
-    ("ping.lim@avanoso.com", "Ping Lim"),
-    ("heidi.hasting@avanoso.com", "Heidi Hasting"),
-    ("bilal.kholki@avanoso.com", "Bilal Kholki"),
-    ("kevin.silk@avanoso.com", "Kevin Silk"),
-    ("patrick.shortt@avanoso.com", "Patrick Shortt"),
+    (f"loryan.strant@{DOMAIN}", "Loryan Strant"),
+    (f"ping.lim@{DOMAIN}", "Ping Lim"),
+    (f"heidi.hasting@{DOMAIN}", "Heidi Hasting"),
+    (f"bilal.kholki@{DOMAIN}", "Bilal Kholki"),
+    (f"kevin.silk@{DOMAIN}", "Kevin Silk"),
+    (f"patrick.shortt@{DOMAIN}", "Patrick Shortt"),
 ]
 
 # Six people was a fixture from before there was anything to compare. The
@@ -101,7 +102,7 @@ def _population(count: int = _DEMO_PEOPLE) -> list[tuple[str, str, str, str]]:
             first = _FIRST_NAMES[i % len(_FIRST_NAMES)]
             last = _LAST_NAMES[(i // len(_FIRST_NAMES)) % len(_LAST_NAMES)]
             name = f"{first} {last}"
-            upn = f"{first.lower()}.{last.lower()}{i}@avanoso.com"
+            upn = f"{first.lower()}.{last.lower()}{i}@{DOMAIN}"
         dept = _DEPARTMENTS[i % len(_DEPARTMENTS)]
         people.append((upn, name, dept, ""))
 
