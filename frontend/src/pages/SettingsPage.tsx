@@ -84,6 +84,14 @@ export default function SettingsPage() {
     setMsg(r.detail);
   }
 
+  async function importUsers() {
+    setMsg(null);
+    const r = await api<{ status: string; detail: string }>("/admin/users/refresh", {
+      method: "POST",
+    });
+    setMsg(r.detail);
+  }
+
   async function runBackfill() {
     setMsg(null);
     const days = backfillDays.trim() ? Number(backfillDays) : undefined;
@@ -291,7 +299,19 @@ export default function SettingsPage() {
         <button onClick={runIngest} className="btn-secondary">
           Run now
         </button>
+        <button onClick={importUsers} className="btn-secondary">
+          Import tenant users
+        </button>
       </div>
+      {/* Two buttons that both say they refresh something is worse than one,
+          so say which is which. The distinction is real: a collection spends
+          minutes on cost and the audit feed, and this does not. */}
+      <p className="-mt-2 text-xs text-slate-500 dark:text-slate-400">
+        <strong>Run now</strong> collects everything — directory, cost and the
+        audit feed. <strong>Import tenant users</strong> re-reads only the
+        directory and its Copilot licences, which is the quick way to pick up
+        somebody who has just joined or just been licensed.
+      </p>
 
       {msg && <div className="text-sm text-slate-600 dark:text-slate-300">{msg}</div>}
 

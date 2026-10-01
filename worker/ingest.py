@@ -298,6 +298,70 @@ async def collect_directory_users(
 
 
 # --- orchestrator -------------------------------------------------------
+async def run_user_sync(
+    session_factory: SessionFactory,
+    *,
+    client: ApiClient | None = None,
+    config: AppConfig | None = None,
+    job_name: str = "users",
+) -> dict[str, Any]:
+    """Re-read the directory and its Copilot licences, and nothing else.
+
+    The scheduled collection does this as its first step, but it also pulls
+    cost and the Purview audit feed, which are slow and rate-limited. This is
+    the cheap half on its own, for the case the full run does not serve: a
+    licence was just assigned, or somebody joined, and waiting hours for the
+    next scheduled collection is the only alternative.
+
+    It matters more than it looks. The flag that decides whether a person
+    appears as licensed is written **only** by this collector, so a tenant that
+    has not run it since that code shipped shows an empty Tenant users page and
+    no licence adoption — which is what happened here, and took a database
+    query to diagnose because nothing in the product could trigger a refresh.
+
+    Recorded in ``job_runs`` like any other collection, so Scan history shows
+    it ran and what it wrote.
+    """
+    owns_client = False
+    async with session_factory() as session:
+        if config is None:
+            config = await load_app_config(session)
+            if config is None or not config.tenant_id:
+                raise IngestError("Credentials are not configured yet.")
+        if client is None:
+            client = build_client(config)
+            owns_client = True
+
+        job = JobRun(job_name=job_name, status="running")
+        session.add(job)
+        await session.flush()
+        await session.commit()
+        stats: dict[str, Any] = {}
+        try:
+            stats["users"] = await collect_directory_users(session, client)
+            await session.commit()
+            job.status = "success"
+            job.finished_at = datetime.now(timezone.utc)
+            job.stats = stats
+            await session.commit()
+            logger.info("User sync '%s' complete: %s", job_name, stats)
+            return stats
+        except Exception as exc:  # noqa: BLE001 - persisted for observability
+            await session.rollback()
+            # JobRun has no error column; the reason goes in stats, the same
+            # way run_ingest records it, so Scan history can show it.
+            stats["error"] = str(exc)
+            job.status = "failed"
+            job.finished_at = datetime.now(timezone.utc)
+            job.stats = stats
+            await session.commit()
+            logger.exception("User sync '%s' failed", job_name)
+            raise
+        finally:
+            if owns_client:
+                await client.aclose()
+
+
 async def run_ingest(
     session_factory: SessionFactory,
     *,

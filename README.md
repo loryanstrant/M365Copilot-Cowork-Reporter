@@ -215,7 +215,8 @@ from the group takes effect in minutes rather than whenever their token next exp
 - **Your activity** — your own Cowork use, led by aggregates rather than a list of rows:
   sessions, average tools and files per day, active days, a per-day chart with a seven-day
   trailing average, how you compare with your team and with the organisation, and your
-  most-used tools and your credit consumption. Comparisons return medians and a
+  most-used tools and your credit consumption, all of it over the whole period the
+  report covers rather than a rolling window. Comparisons return medians and a
   percentile only — never
   another individual's figures, and a series is **withheld entirely below five peers** —
   the team *and* the organisation, because the arithmetic that makes a small group
@@ -237,6 +238,10 @@ from the group takes effect in minutes rather than whenever their token next exp
   zeroes, because that is the row that answers "who are we paying for and getting nothing
   from". Licence is detected by service plan (see below), and a user whose licence has never
   been determined is not counted as licensed.
+- **Import tenant users (admin)** — re-reads the directory and its Copilot
+  licences on demand, without the cost and audit collection a full run does.
+  The licence flag is written only by that collector, so this is how you pick
+  up somebody newly joined or newly licensed without waiting for the schedule.
 - **Scan history (admin)** — every collection run, newest first: scheduled, manual, historical
   backfills and both CSV uploads, with what each one wrote, how long it took and whether it
   succeeded. Failures show their error. This is what `job_runs` has recorded since the first

@@ -120,7 +120,16 @@ async def test_a_team_at_the_floor_is_shown(client):
     assert body["team_state"] == "shown"
     assert body["team_label"] == "Engineering"
     assert body["team_peers"] == MIN_TEAM_PEERS
-    assert all(s["team_median"] > 0 for s in body["stats"])
+    # Sessions and files come from the audit events this seeded, so they carry
+    # real medians. Credits do not: they arrive by a separate CSV upload, and
+    # nothing here uploaded one. A zero there is the honest answer, which is
+    # why this no longer asserts every measure is non-zero.
+    from_events = {"Sessions", "Files touched"}
+    assert all(
+        s["team_median"] > 0 for s in body["stats"] if s["label"] in from_events
+    )
+    credits = next(s for s in body["stats"] if s["label"] == "Credits spent")
+    assert credits["team_median"] == 0
 
 
 @pytest.mark.asyncio
@@ -331,7 +340,12 @@ async def test_the_organisation_shows_at_the_floor(client):
     assert body["organisation_state"] == "shown"
     assert body["org_peers"] == MIN_TEAM_PEERS
     assert body["org_percentile"] is not None
-    assert all(st["org_median"] > 0 for st in body["stats"])
+    # Credits come from a CSV upload rather than the audit events, and this
+    # seeds none, so only the event-derived measures carry a median here.
+    from_events = {"Sessions", "Files touched"}
+    assert all(
+        st["org_median"] > 0 for st in body["stats"] if st["label"] in from_events
+    )
 
 
 @pytest.mark.asyncio
@@ -340,7 +354,7 @@ async def test_the_panel_is_told_the_period_and_the_population(client):
 
     body = await _standing(client)
 
-    assert body["period_days"] == 30
+    assert body["period_days"] == 30  # this helper asks for an explicit window
     assert body["period_from"] and body["period_to"]
     assert body["period_from"] < body["period_to"]
     # 1 me + 5 peers + 12 others, all of whom have activity in the window.
@@ -382,3 +396,24 @@ async def test_the_team_median_excludes_the_viewer(client):
     assert sessions["team_people"] == MIN_TEAM_PEERS
     assert sessions["mine"] == 9
     assert sessions["team_median"] == 2
+
+
+@pytest.mark.asyncio
+async def test_omitting_the_window_compares_over_all_time(client):
+    """What the personal page actually asks for.
+
+    The page used to show a 30-day chart above totals counting every session
+    the report had ever seen — two different claims stacked on one screen, with
+    nothing telling the reader which was which. It now asks for all time
+    throughout, so the default here has to be all time rather than 30 days.
+    """
+    await _seed(peers_in_my_department=MIN_TEAM_PEERS)
+
+    r = await client.get("/metrics/me/standing", headers=_headers())
+    assert r.status_code == 200, r.text
+    body = r.json()
+
+    assert body["period_days"] is None, "no window was asked for, so none is claimed"
+    # The dates are still named: "all time" is not an excuse to say nothing
+    # about which days the figures cover.
+    assert body["period_from"] and body["period_to"]

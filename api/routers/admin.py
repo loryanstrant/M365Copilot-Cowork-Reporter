@@ -39,7 +39,7 @@ from shared.models import (
     DirectoryUser,
     JobRun,
 )
-from worker.ingest import run_ingest, test_connection
+from worker.ingest import run_ingest, run_user_sync, test_connection
 from worker.backfill import (
     get_progress,
     is_running as backfill_running,
@@ -143,6 +143,40 @@ async def _run_manual_ingest() -> None:
             await run_ingest(SessionLocal, job_name="manual")
         except Exception:  # pragma: no cover - logged for observability
             logger.exception("Manual ingest failed")
+
+
+_user_sync_lock = asyncio.Lock()
+
+
+async def _run_user_sync() -> None:
+    async with _user_sync_lock:
+        try:
+            await run_user_sync(SessionLocal, job_name="users")
+        except Exception:  # pragma: no cover - logged for observability
+            logger.exception("Manual user sync failed")
+
+
+@router.post("/users/refresh", response_model=IngestRunOut)
+async def users_refresh(background: BackgroundTasks) -> IngestRunOut:
+    """Re-read the directory and its Copilot licences, without pulling data.
+
+    The scheduled collection does this first and then spends minutes on cost
+    and the audit feed. This is the cheap half alone, for when a licence has
+    just been assigned or somebody has joined and the next scheduled run is
+    hours away.
+
+    Its own lock rather than the ingest lock: this is a short read that should
+    not be blocked by, or block, a long collection.
+    """
+    if _user_sync_lock.locked():
+        return IngestRunOut(
+            status="already_running",
+            detail="A user import is already in progress.",
+        )
+    background.add_task(_run_user_sync)
+    return IngestRunOut(
+        status="started", detail="Importing tenant users in the background."
+    )
 
 
 @router.post("/ingest/run", response_model=IngestRunOut)
