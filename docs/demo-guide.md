@@ -34,6 +34,13 @@ It is for whoever has to explain the Cowork bill, and for whoever has to bill it
 
 ## 2. Before you start
 
+**Credentials.** Username `admin`. The password is in the private
+`Copilot-Reporting-Demos` repo on Gitea, at `docs/demo-credentials.md` —
+<https://gitea.strant.casa/loryanstrant/Copilot-Reporting-Demos>. It is
+deliberately not written here: this repository is mirrored to public GitHub.
+It is also in Vaultwarden (org **Strant Family**, collection **LS Development**).
+
+
 **● Open this five minutes before you need it.** The demo instance is set to sleep when nobody
 is using it, so the **first page load takes 30 to 60 seconds** and looks like a hung browser.
 Once it is awake it stays quick. When this was last checked on 1 October 2026 a cold start took
