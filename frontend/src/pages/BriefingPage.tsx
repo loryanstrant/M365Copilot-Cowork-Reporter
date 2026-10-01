@@ -95,32 +95,21 @@ export default function BriefingPage() {
             />
           </ChartCard>
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            <ChartCard title="Leading agents" subtitle="Sessions in the period">
-              <Ranked
-                rows={data.top_agents.map((a) => ({
-                  name: a.name,
-                  value: a.value,
-                  previous: a.previous,
-                }))}
-                colour={CHART_COLORS[0]}
-                format={fmtNumber}
-                empty="No named agents recorded in this period."
-              />
-            </ChartCard>
-            <ChartCard title="Leading resource groups" subtitle="Azure cost in the period">
-              <Ranked
-                rows={data.top_resource_groups.map((r) => ({
-                  name: r.name,
-                  value: r.value,
-                  previous: r.previous,
-                }))}
-                colour={CHART_COLORS[2]}
-                format={money}
-                empty="No Azure cost recorded in this period."
-              />
-            </ChartCard>
-          </div>
+          {/* Full width, not half: the "Leading agents" card that used to sit
+              beside this one is gone, because every event in this report is
+              Cowork and ranking agents ranked one thing against itself. */}
+          <ChartCard title="Leading resource groups" subtitle="Azure cost in the period">
+            <Ranked
+              rows={data.top_resource_groups.map((r) => ({
+                name: r.name,
+                value: r.value,
+                previous: r.previous,
+              }))}
+              colour={CHART_COLORS[2]}
+              format={money}
+              empty="No Azure cost recorded in this period."
+            />
+          </ChartCard>
         </>
       )}
     </div>
@@ -203,15 +192,6 @@ function headlines(d: Briefing): string[] {
     out.push(
       `Cowork touched ${fmtNumber(files.current)} files across ${fmtNumber(
         sessions?.current ?? 0,
-      )} sessions.`,
-    );
-  }
-
-  const topAgent = d.top_agents[0];
-  if (topAgent?.name) {
-    out.push(
-      `${topAgent.name} was the most-used agent, with ${fmtNumber(
-        topAgent.value,
       )} sessions.`,
     );
   }

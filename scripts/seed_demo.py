@@ -119,12 +119,13 @@ _USERS = _population()
 _RGS = ["rg-copilot-cowork-prod", "rg-copilot-pilot", "rg-shared-ai"]
 _METERS = [("Copilot", "Copilot Credits"), ("Azure OpenAI", "gpt tokens")]
 _PERIODS = [7, 28, 90, 180]
-# Named agents, tools and documents, so the "top agents" and "top tools" bars
-# have something to rank. The old seeder used one agent and one tool, which
-# rendered as a single bar and demonstrated nothing.
-_AGENTS = [
-    "Researcher", "Analyst", "Facilitator", "Writer", "Scheduler", "Copilot Cowork",
-]
+# Named tools and documents, so the "top tools" bars have something to rank.
+#
+# Agents are not part of that any more. Cowork reports itself, so the seeder's
+# cast of Researcher, Analyst, Facilitator and friends made a breakdown look
+# meaningful that against a real tenant ranked one name against itself — which
+# is why that breakdown is gone and this list has one entry.
+_AGENTS = ["Copilot Cowork"]
 _TOOLS = [
     "file_search", "web_search", "create_document", "send_mail",
     "summarise_thread", "schedule_meeting", "code_interpreter",

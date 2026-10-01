@@ -82,9 +82,20 @@ def _to_dt(value: Any) -> datetime | None:
     return datetime(d.year, d.month, d.day, tzinfo=timezone.utc) if d else None
 
 
+# Headers seen in the wild for the same figure. Matching is normalised
+# (lower-cased, non-alphanumerics stripped), so only genuinely different
+# wordings need listing — "Monthly Credits Used" and "monthly_credits_used"
+# are one entry.
+#
+# "Monthly Credits Used" is what the Microsoft 365 admin centre's Copilot
+# Credits export actually calls it, and its absence here is why a real export
+# imported every row with no figure at all: the names were matched, the numbers
+# were not, and a credits report of 0.0000 looked exactly like a tenant that
+# had consumed nothing.
 _CREDIT_COLUMNS = (
+    "Monthly Credits Used", "Monthly Credits Consumed", "Credits Used",
     "Credits Consumed", "ConsumedCredits", "Consumed Credits",
-    "Credits", "Total Credits",
+    "Credits", "Total Credits", "Total Credits Used",
 )
 
 

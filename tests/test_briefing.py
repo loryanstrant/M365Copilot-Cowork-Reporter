@@ -190,16 +190,6 @@ async def test_a_licensed_person_active_twice_counts_once(client):
     assert (await _get(client))["active_licensed_users"] == 1
 
 
-@pytest.mark.asyncio
-async def test_top_agents_carry_their_previous_period_figure(client):
-    for i in range(3):
-        await _event(f"c{i}", days_ago=2, agent="Researcher")
-    await _event("p0", days_ago=40, agent="Researcher")
-    top = (await _get(client))["top_agents"][0]
-    assert top["name"] == "Researcher"
-    assert top["value"] == 3
-    assert top["previous"] == 1
-
 
 @pytest.mark.asyncio
 async def test_top_resource_groups_rank_by_cost(client):

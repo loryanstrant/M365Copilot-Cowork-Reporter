@@ -85,3 +85,38 @@ async def test_a_ragged_row_does_not_break_the_diagnostic(session):
     result = await import_credit_consumption(session, csv)
     assert result["imported"] == 1
     assert "User Principal Name" in result["detail"]
+
+
+# --------------------------------------------------------------------------- #
+# The header the real export actually uses
+#
+# The live tenant's upload landed six rows with a name on each and no figure
+# anywhere: the parser matched "User Principal Name" and "Display Name" and
+# none of its five candidate spellings for the number. The admin centre calls
+# that column **Monthly Credits Used**, which was not among them.
+# --------------------------------------------------------------------------- #
+@pytest.mark.asyncio
+async def test_monthly_credits_used_is_the_admin_centre_spelling(session):
+    csv = (
+        b"User Principal Name,Display Name,Monthly Credits Used\n"
+        b"ada@contoso.com,Ada Lovelace,1234.5\n"
+    )
+    result = await import_credit_consumption(session, csv)
+    assert result["imported"] == 1
+    row = await session.scalar(select(CreditConsumption))
+    assert float(row.credits_consumed) == 1234.5
+    # and it is a match, so the "we found no figures" warning stays quiet
+    assert result["detail"] is None
+
+
+@pytest.mark.asyncio
+async def test_the_header_match_ignores_case_and_punctuation(session):
+    """Matching is normalised, so one entry covers the export's variants."""
+    csv = (
+        b"userPrincipalName,displayName,monthly_credits_used\n"
+        b"ada@contoso.com,Ada,7\n"
+    )
+    result = await import_credit_consumption(session, csv)
+    row = await session.scalar(select(CreditConsumption))
+    assert float(row.credits_consumed) == 7
+    assert result["detail"] is None

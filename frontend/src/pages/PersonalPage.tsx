@@ -21,6 +21,15 @@ import { fmtDate, fmtNumber } from "../lib/format";
 
 const DAYS = 30;
 
+/** Credits run to fractions of one, so a whole-number format would show most
+ *  people a flat 0 and lose the difference between none and nearly none. */
+function fmtCredits(n: number): string {
+  return n.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 /**
  * "Your activity": the landing page for anyone signed in with a work account.
  *
@@ -39,7 +48,6 @@ export default function PersonalPage() {
   const [activity, setActivity] = useState<MyActivity | null>(null);
   const [daily, setDaily] = useState<MyDay[]>([]);
   const [standing, setStanding] = useState<MyStanding | null>(null);
-  const [agents, setAgents] = useState<MyTopItem[]>([]);
   const [tools, setTools] = useState<MyTopItem[]>([]);
   const [events, setEvents] = useState<MyEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,11 +57,10 @@ export default function PersonalPage() {
     let active = true;
     (async () => {
       try {
-        const [a, d, s, ag, tl, ev] = await Promise.all([
+        const [a, d, s, tl, ev] = await Promise.all([
           api<MyActivity>(`/metrics/me/activity?days=${DAYS}`),
           api<MyDay[]>(`/metrics/me/daily?days=${DAYS}`),
           api<MyStanding>(`/metrics/me/standing?days=${DAYS}`),
-          api<MyTopItem[]>(`/metrics/me/top-agents?days=${DAYS}`),
           api<MyTopItem[]>(`/metrics/me/top-tools?days=${DAYS}`),
           api<MyEvent[]>("/metrics/me/events?limit=25"),
         ]);
@@ -61,7 +68,6 @@ export default function PersonalPage() {
         setActivity(a);
         setDaily(d);
         setStanding(s);
-        setAgents(ag);
         setTools(tl);
         setEvents(ev);
       } catch {
@@ -112,7 +118,7 @@ export default function PersonalPage() {
         </ChartCard>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
             <KpiCard
               label="Sessions"
               value={fmtNumber(activity?.sessions ?? 0)}
@@ -141,6 +147,18 @@ export default function PersonalPage() {
               value={fmtNumber(activity?.active_days ?? 0)}
               hint={`of the last ${DAYS} days`}
             />
+            {/* The hint distinguishes "you used none" from "none were
+                imported". A bare 0.00 cannot, and this report spent a while
+                showing the second while looking like the first. */}
+            <KpiCard
+              label="Credits used"
+              value={fmtCredits(activity?.credits_consumed ?? 0)}
+              hint={
+                activity?.credits_available
+                  ? "Your share of the latest credit upload"
+                  : "No credit figures imported yet"
+              }
+            />
           </div>
 
           <ChartCard
@@ -156,20 +174,15 @@ export default function PersonalPage() {
 
           {standing && <PeerComparison standing={standing} />}
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            <ChartCard
-              title="Your top agents"
-              subtitle={`Sessions by agent, last ${DAYS} days`}
-            >
-              <RankedBars rows={agents} colour={CHART_COLORS[0]} empty="No agents recorded yet." />
-            </ChartCard>
-            <ChartCard
-              title="Your top tools"
-              subtitle={`Tool calls, last ${DAYS} days`}
-            >
-              <RankedBars rows={tools} colour={CHART_COLORS[3]} empty="No tool calls recorded yet." />
-            </ChartCard>
-          </div>
+          {/* Tools alone, full width. The agent breakdown that used to sit
+              beside it is gone: every event in this report is Cowork, so
+              ranking agents ranked one thing against itself. */}
+          <ChartCard
+            title="Your top tools"
+            subtitle={`Tool calls, last ${DAYS} days`}
+          >
+            <RankedBars rows={tools} colour={CHART_COLORS[3]} empty="No tool calls recorded yet." />
+          </ChartCard>
 
           <details className="card p-5">
             <summary className="cursor-pointer text-sm font-semibold text-slate-700 dark:text-slate-200">
