@@ -220,7 +220,9 @@ class DirectoryUserOut(BaseModel):
 
 
 class UsageTrendOut(BaseModel):
-    period_days: int
+    #: None when the comparison covers all time, which is what the personal
+    #: page asks for. The page names the actual dates either way.
+    period_days: int | None
     active_users: int
     total_tasks: int
 
@@ -330,7 +332,9 @@ class MyStandingOut(BaseModel):
     # The window all three series cover. Named on the panel, because a
     # comparison whose period is unstated invites the reader to assume it is
     # all-time for the team and recent for them.
-    period_days: int = 30
+    #: None when the comparison covers all time, which is what the personal
+    #: page asks for. The dates are named either way.
+    period_days: int | None = None
     period_from: date | None = None
     period_to: date | None = None
     # The organisation series answers to the same floor as the team. The
@@ -359,7 +363,10 @@ class MyActivityOut(BaseModel):
 
     display_name: str | None = None
     user_principal_name: str | None = None
-    days: int = 30
+    #: The window these figures cover, or None for all time — which is what
+    #: the personal page asks for, so its chart and its totals describe the
+    #: same span.
+    days: int | None = None
     sessions: int = 0
     tools: int = 0
     files: int = 0

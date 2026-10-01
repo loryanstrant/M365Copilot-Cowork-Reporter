@@ -19,15 +19,11 @@ import PeerComparison from "../components/PeerComparison";
 import { CHART_COLORS } from "../components/chartTheme";
 import { fmtDate, fmtNumber } from "../lib/format";
 
-const DAYS = 30;
 
-/** Credits run to fractions of one, so a whole-number format would show most
- *  people a flat 0 and lose the difference between none and nearly none. */
+/** Credits are issued and consumed whole, so the decimals were noise on every
+ *  row that ever showed them. */
 function fmtCredits(n: number): string {
-  return n.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+  return Math.round(n).toLocaleString();
 }
 
 /**
@@ -58,10 +54,13 @@ export default function PersonalPage() {
     (async () => {
       try {
         const [a, d, s, tl, ev] = await Promise.all([
-          api<MyActivity>(`/metrics/me/activity?days=${DAYS}`),
-          api<MyDay[]>(`/metrics/me/daily?days=${DAYS}`),
-          api<MyStanding>(`/metrics/me/standing?days=${DAYS}`),
-          api<MyTopItem[]>(`/metrics/me/top-tools?days=${DAYS}`),
+          // No window: all time, so the chart and the totals above it cover
+          // the same span. A 30-day chart under an all-time figure is two
+          // claims on one screen with nothing to tell them apart.
+          api<MyActivity>("/metrics/me/activity"),
+          api<MyDay[]>("/metrics/me/daily"),
+          api<MyStanding>("/metrics/me/standing"),
+          api<MyTopItem[]>("/metrics/me/top-tools"),
           api<MyEvent[]>("/metrics/me/events?limit=25"),
         ]);
         if (!active) return;
@@ -94,7 +93,7 @@ export default function PersonalPage() {
       <div>
         <h1 className="text-2xl font-bold">Your Cowork activity</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          How you've been using Copilot Cowork over the last {DAYS} days. Only you and
+          How you've been using Copilot Cowork. Only you and
           your administrators can see this.
         </p>
       </div>
@@ -110,8 +109,7 @@ export default function PersonalPage() {
               Nothing to show yet
             </h2>
             <p className="mx-auto max-w-md text-sm text-slate-500 dark:text-slate-400">
-              We can't find any Cowork activity for your account in the last {DAYS}{" "}
-              days. That usually means you haven't used Cowork since reporting started,
+              We can't find any Cowork activity recorded for your account. That usually means you haven't used Cowork since reporting started,
               or the collectors haven't run yet.
             </p>
           </div>
@@ -145,7 +143,7 @@ export default function PersonalPage() {
             <KpiCard
               label="Active days"
               value={fmtNumber(activity?.active_days ?? 0)}
-              hint={`of the last ${DAYS} days`}
+              hint="with recorded activity"
             />
             {/* The hint distinguishes "you used none" from "none were
                 imported". A bare 0.00 cannot, and this report spent a while
@@ -163,7 +161,7 @@ export default function PersonalPage() {
 
           <ChartCard
             title="Your sessions per day"
-            subtitle={`Cowork audit events, last ${DAYS} days, with a 7-day trailing average`}
+            subtitle="Cowork audit events, with a 7-day trailing average"
           >
             <ActivityTimeline
               points={daily as unknown as TimelinePoint[]}
@@ -179,7 +177,7 @@ export default function PersonalPage() {
               ranking agents ranked one thing against itself. */}
           <ChartCard
             title="Your top tools"
-            subtitle={`Tool calls, last ${DAYS} days`}
+            subtitle="Tool calls"
           >
             <RankedBars rows={tools} colour={CHART_COLORS[3]} empty="No tool calls recorded yet." />
           </ChartCard>

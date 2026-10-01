@@ -21,7 +21,7 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import Integer, case, func, literal, or_, select
+from sqlalchemy import Integer, case, func, literal, or_, select, true
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.functions import GenericFunction
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -562,12 +562,16 @@ async def _my_latest_period(
     periods = [p for p in periods if p is not None]
     if not periods:
         return None
+    # All time has no number to be near, so take the widest snapshot the report
+    # holds — that is the closest thing to "everything" this data offers.
+    if days is None:
+        return max(periods)
     return min(periods, key=lambda p: abs(p - days))
 
 
 @me_router.get("/summary", response_model=MySummaryOut)
 async def my_summary(
-    days: int = Query(30, ge=1, le=365),
+    days: int | None = Query(None, ge=1, le=365),
     user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> MySummaryOut:
@@ -692,7 +696,7 @@ async def my_usage_trend(
 
 @me_router.get("/comparison", response_model=MyComparisonOut)
 async def my_comparison(
-    days: int = Query(30, ge=1, le=365),
+    days: int | None = Query(None, ge=1, le=365),
     user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> MyComparisonOut:
@@ -830,15 +834,23 @@ def _json_len(column):
     )
 
 
-def _event_window(days: int):
-    """Events within the window, as a filter clause."""
+def _event_window(days: int | None):
+    """Events within the window, as a filter clause. ``None`` means all time.
+
+    The personal page asks for all time, so that its chart covers the same span
+    as its totals. A 30-day chart under a figure counting every session the
+    report has ever seen is two different claims sitting on top of each other,
+    and the reader has no way to tell which is which.
+    """
+    if days is None:
+        return true()
     since = datetime.now(timezone.utc) - timedelta(days=days)
     return CoworkEvent.created_at >= since
 
 
 @me_router.get("/activity", response_model=MyActivityOut)
 async def my_activity(
-    days: int = Query(30, ge=1, le=365),
+    days: int | None = Query(None, ge=1, le=365),
     user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> MyActivityOut:
@@ -917,7 +929,7 @@ async def my_activity(
 
 @me_router.get("/daily", response_model=list[MyDayOut])
 async def my_daily(
-    days: int = Query(30, ge=1, le=365),
+    days: int | None = Query(None, ge=1, le=365),
     user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> list[MyDayOut]:
@@ -951,8 +963,15 @@ async def my_daily(
 
     found = {_as_date(r.day): r for r in rows}
     today = date.today()
+    # All time runs from this person's first recorded session to today, so the
+    # axis still has every day on it — a gap in the axis reads as "no data
+    # here", which is a different claim from "no activity that day".
+    if days is None:
+        span = (today - min(found)).days + 1 if found else 0
+    else:
+        span = days
     out: list[MyDayOut] = []
-    for offset in range(days - 1, -1, -1):
+    for offset in range(span - 1, -1, -1):
         d = today - timedelta(days=offset)
         r = found.get(d)
         out.append(
@@ -968,7 +987,7 @@ async def my_daily(
 
 @me_router.get("/top-tools", response_model=list[MyTopItemOut])
 async def my_top_tools(
-    days: int = Query(30, ge=1, le=365),
+    days: int | None = Query(None, ge=1, le=365),
     limit: int = Query(5, ge=1, le=20),
     user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
@@ -1035,7 +1054,7 @@ def _median(values: list[int]) -> int:
 
 @me_router.get("/standing", response_model=MyStandingOut)
 async def my_standing(
-    days: int = Query(30, ge=1, le=365),
+    days: int | None = Query(None, ge=1, le=365),
     user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> MyStandingOut:
@@ -1089,6 +1108,47 @@ async def my_standing(
             .group_by(person, DirectoryUser.department, DirectoryUser.manager_name)
         )
     ).all()
+
+    # Credits per person, keyed to match the event totals above. They come
+    # from the latest uploaded snapshot rather than a sum across snapshots:
+    # each export restates the month to date, so adding two double-counts.
+    #
+    # Unlike sessions and tools, this is not derived from the audit events —
+    # it is a separate upload, and somebody can have credits with no events or
+    # events with no credits. A person missing from the credit file counts as
+    # zero rather than being dropped from the comparison, because they did use
+    # Cowork; what is absent is the figure, not the person.
+    credits_by_person: dict[str, float] = {}
+    latest_as_of = await session.scalar(select(func.max(CreditConsumption.as_of_date)))
+    if latest_as_of is not None:
+        credit_key = func.coalesce(
+            DirectoryUser.user_id, func.lower(CreditConsumption.scope_id)
+        )
+        for key, value in (
+            await session.execute(
+                select(
+                    credit_key.label("person"),
+                    func.coalesce(func.sum(CreditConsumption.credits_consumed), 0),
+                )
+                .select_from(CreditConsumption)
+                .join(
+                    DirectoryUser,
+                    or_(
+                        DirectoryUser.user_id == CreditConsumption.scope_id,
+                        func.lower(DirectoryUser.upn)
+                        == func.lower(CreditConsumption.scope_id),
+                    ),
+                    isouter=True,
+                )
+                .where(
+                    CreditConsumption.as_of_date == latest_as_of,
+                    CreditConsumption.scope_type == "user",
+                )
+                .group_by(credit_key)
+            )
+        ).all():
+            if key:
+                credits_by_person[str(key)] = float(value or 0)
 
     me_key = (oid or (upn.lower() if upn else None)) or None
     mine = next((r for r in totals if r.person == me_key), None)
@@ -1159,15 +1219,23 @@ async def my_standing(
     show_org = len(org_peers) >= MIN_TEAM_PEERS
     organisation_state = "shown" if show_org else "too_small"
 
-    def _stat(label: str, attr: str) -> PeerStatOut:
-        org_values = [int(getattr(r, attr) or 0) for r in totals]
-        peer_values = [int(getattr(r, attr) or 0) for r in peers]
+    def _stat(label: str, attr: str, source: dict[str, float] | None = None) -> PeerStatOut:
+        # ``source`` is for a measure that does not live on the event row —
+        # credits arrive by upload, not from the audit feed, so they are looked
+        # up by the same person key rather than read off the row.
+        def value_of(row) -> int:
+            if source is not None:
+                return round(source.get(str(row.person), 0))
+            return int(getattr(row, attr) or 0)
+
+        org_values = [value_of(r) for r in totals]
+        peer_values = [value_of(r) for r in peers]
         return PeerStatOut(
             label=label,
             # The viewer's own figures are never a disclosure and are always
             # sent, so a person in a tenant too small to compare against still
             # gets a page with their numbers on it rather than an empty card.
-            mine=int(getattr(mine, attr) or 0) if mine is not None else 0,
+            mine=value_of(mine) if mine is not None else 0,
             # Withheld means withheld: the figure is not sent and then hidden
             # by the page, because a number that reaches the browser has been
             # disclosed whatever the page does with it.
@@ -1208,7 +1276,14 @@ async def my_standing(
     # exact confusion naming the period was meant to remove.
     window_end = datetime.now(timezone.utc)
     period_to = window_end.date()
-    period_from = (window_end - timedelta(days=days)).date()
+    if days is None:
+        # All time starts where the data does, not at an arbitrary offset. The
+        # earliest event anywhere in the comparison population is the honest
+        # answer, because that is the span the medians were computed over.
+        earliest = await session.scalar(select(func.min(CoworkEvent.created_at)))
+        period_from = (earliest.date() if earliest else period_to)
+    else:
+        period_from = (window_end - timedelta(days=days)).date()
 
     return MyStandingOut(
         team_label=team_label,
@@ -1227,7 +1302,10 @@ async def my_standing(
         org_people=len(totals),
         stats=[
             _stat("Sessions", "sessions"),
-            _stat("Tools used", "tools"),
+            # Credits rather than tool calls: what a person costs is the
+            # question worth comparing, and a tool count was only ever a proxy
+            # for busyness that nobody acts on.
+            _stat("Credits spent", "credits", credits_by_person),
             _stat("Files touched", "files"),
         ],
     )
