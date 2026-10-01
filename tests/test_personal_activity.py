@@ -170,27 +170,24 @@ async def test_daily_buckets_events_onto_their_own_day(client):
 
 
 # --------------------------------------------------------------------------- #
-# Top agents and tools
+# Top tools
 # --------------------------------------------------------------------------- #
-@pytest.mark.asyncio
-async def test_top_agents_ranks_by_session_count(client):
-    await _person(ME_OID, ME_UPN, "Ada")
-    for i in range(3):
-        await _event(f"r{i}", agent="Researcher")
-    await _event("a1", agent="Analyst")
-    rows = (await client.get("/metrics/me/top-agents", headers=_me())).json()
-    assert rows[0] == {"name": "Researcher", "value": 3}
-    assert rows[1] == {"name": "Analyst", "value": 1}
-
 
 @pytest.mark.asyncio
-async def test_an_event_with_no_agent_is_labelled_not_dropped(client):
-    """A session without a named agent is still a session."""
+async def test_an_event_with_no_agent_is_still_counted(client):
+    """A session without a named agent is still a session.
+
+    This used to assert it through the per-agent breakdown, which has been
+    removed — Cowork reports itself, so that ranked one name against itself.
+    The claim it was protecting is unchanged and still worth holding: roughly
+    a fifth of the real tenant's events carry no agent name, and dropping them
+    would quietly understate everybody's usage.
+    """
     await _person(ME_OID, ME_UPN, "Ada")
     await _event("e1", agent=None)
-    rows = (await client.get("/metrics/me/top-agents", headers=_me())).json()
-    assert rows[0]["value"] == 1
-    assert rows[0]["name"] == "cowork"  # falls back to app_host
+    body = (await client.get("/metrics/me/activity", headers=_me())).json()
+    assert body["sessions"] == 1
+    assert body["has_data"] is True
 
 
 @pytest.mark.asyncio
@@ -339,3 +336,54 @@ async def test_standing_returns_no_individual_figures(client):
     raw = (await client.get("/metrics/me/standing", headers=_me())).text
     assert "colleague@contoso.com" not in raw
     assert "Colleague" not in raw
+
+
+# --------------------------------------------------------------------------- #
+# Credits on the personal page
+#
+# Cowork credits are consumed per person, so "how much did I use" belongs on
+# the page about one person. The figure comes from the latest uploaded
+# snapshot rather than a sum across snapshots: each export restates the month
+# to date, so adding two together double-counts.
+# --------------------------------------------------------------------------- #
+@pytest.mark.asyncio
+async def test_activity_reports_my_own_credits(client):
+    from datetime import date
+    from shared.models import CreditConsumption
+
+    await _person(ME_OID, ME_UPN, "Ada")
+    async with SessionLocal() as s:
+        s.add(CreditConsumption(
+            as_of_date=date(2026, 9, 30), scope_type="user",
+            scope_id=ME_UPN, scope_name="Ada", credits_consumed=12.5, source="csv",
+        ))
+        s.add(CreditConsumption(
+            as_of_date=date(2026, 9, 30), scope_type="user",
+            scope_id="someone.else@contoso.com", scope_name="Bob",
+            credits_consumed=99, source="csv",
+        ))
+        await s.commit()
+    body = (await client.get("/metrics/me/activity", headers=_me())).json()
+    assert body["credits_consumed"] == 12.5, "somebody else's credits leaked in"
+    assert body["credits_available"] is True
+
+
+@pytest.mark.asyncio
+async def test_zero_credits_says_whether_any_were_imported(client):
+    """A bare 0.00 cannot tell "I used none" from "none were imported", and
+    this report spent a day showing the second while looking like the first."""
+    from datetime import date
+    from shared.models import CreditConsumption
+
+    await _person(ME_OID, ME_UPN, "Ada")
+    async with SessionLocal() as s:
+        s.add(CreditConsumption(
+            as_of_date=date(2026, 9, 30), scope_type="user",
+            scope_id=ME_UPN, scope_name="Ada", credits_consumed=0, source="csv",
+        ))
+        await s.commit()
+    body = (await client.get("/metrics/me/activity", headers=_me())).json()
+    assert body["credits_consumed"] == 0
+    assert body["credits_available"] is False, (
+        "nobody has a non-zero figure, so the page must not imply this is real usage"
+    )

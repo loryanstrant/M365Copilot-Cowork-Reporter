@@ -365,6 +365,11 @@ class MyActivityOut(BaseModel):
     files: int = 0
     active_days: int = 0
     last_activity_date: datetime | None = None
+    credits_consumed: float = 0.0
+    #: False when no credit figures have been imported at all, which is not the
+    #: same as a person who consumed none. The page says which it is rather
+    #: than showing a bare 0.00 that could mean either.
+    credits_available: bool = False
     has_data: bool = False
 
 
@@ -403,5 +408,4 @@ class BriefingOut(BaseModel):
     licensed_users: int = 0
     active_licensed_users: int = 0
     idle_licensed_users: int = 0
-    top_agents: list[BriefingItemOut] = []
     top_resource_groups: list[BriefingItemOut] = []

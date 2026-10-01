@@ -20,7 +20,8 @@ are produced.
 ### Your activity
 
 Your own Cowork use: sessions, tools and files per day, how you compare with
-your team and the wider organisation, and which agents and tools you lean on.
+your team and the wider organisation, which tools you lean on, and the credits
+you have consumed.
 Only medians are ever shown for other people. Anyone signed in with a work
 account gets this page, whether or not they can see organisation-wide data.
 
@@ -214,7 +215,8 @@ from the group takes effect in minutes rather than whenever their token next exp
 - **Your activity** — your own Cowork use, led by aggregates rather than a list of rows:
   sessions, average tools and files per day, active days, a per-day chart with a seven-day
   trailing average, how you compare with your team and with the organisation, and your
-  most-used agents and tools. Comparisons return medians and a percentile only — never
+  most-used tools and your credit consumption. Comparisons return medians and a
+  percentile only — never
   another individual's figures, and a series is **withheld entirely below five peers** —
   the team *and* the organisation, because the arithmetic that makes a small group
   disclosing does not care what the group is called, and in a four-person pilot tenant the
@@ -224,7 +226,7 @@ from the group takes effect in minutes rather than whenever their token next exp
   panel names the period it covers and states that your percentile is measured against the
   organisation rather than your team. Shown to anyone signed in with a work account.
 - **Executive briefing** — the last 30 days against the 30 before them: sessions, tools, files,
-  Azure spend, licensed-user adoption, leading agents and leading resource groups. Deterministic
+  Azure spend, licensed-user adoption and leading resource groups. Deterministic
   end to end. Every figure is SQL and the sentences are assembled from those figures against
   fixed thresholds, so there is no model anywhere in it and nothing it says can be invented.
 - **Overview** — headline KPIs across consumption and usage with trend since GA.

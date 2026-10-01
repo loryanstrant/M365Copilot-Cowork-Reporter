@@ -185,6 +185,8 @@ export interface MyActivity {
   active_days: number;
   last_activity_date: string | null;
   has_data: boolean;
+  credits_consumed: number;
+  credits_available: boolean;
 }
 
 export interface MyDay {
@@ -261,6 +263,5 @@ export interface Briefing {
   licensed_users: number;
   active_licensed_users: number;
   idle_licensed_users: number;
-  top_agents: BriefingItem[];
   top_resource_groups: BriefingItem[];
 }

@@ -866,6 +866,40 @@ async def my_activity(
         )
     ).one()
 
+    # Credits come from the latest uploaded snapshot, not from a sum across
+    # snapshots: each export restates the month to date, so adding two of them
+    # together double-counts.
+    credits = 0.0
+    credits_available = False
+    latest_as_of = await session.scalar(select(func.max(CreditConsumption.as_of_date)))
+    if latest_as_of is not None:
+        credits = float(
+            await session.scalar(
+                select(
+                    func.coalesce(func.sum(CreditConsumption.credits_consumed), 0)
+                ).where(
+                    CreditConsumption.as_of_date == latest_as_of,
+                    CreditConsumption.scope_type == "user",
+                    _my_credit_cond(oid, upn),
+                )
+            )
+            or 0
+        )
+        # Whether anybody's figures came through at all, which is the question
+        # a zero cannot answer on its own. An import that matched no credits
+        # column stores a row per person with nothing in it, and that reads
+        # exactly like a tenant that consumed nothing.
+        credits_available = bool(
+            await session.scalar(
+                select(func.count())
+                .select_from(CreditConsumption)
+                .where(
+                    CreditConsumption.as_of_date == latest_as_of,
+                    CreditConsumption.credits_consumed > 0,
+                )
+            )
+        )
+
     return MyActivityOut(
         display_name=display_name,
         user_principal_name=upn,
@@ -875,6 +909,8 @@ async def my_activity(
         files=int(row.files or 0),
         active_days=int(row.active_days or 0),
         last_activity_date=row.last_seen,
+        credits_consumed=credits,
+        credits_available=credits_available,
         has_data=bool(row.sessions),
     )
 
@@ -928,28 +964,6 @@ async def my_daily(
             )
         )
     return out
-
-
-@me_router.get("/top-agents", response_model=list[MyTopItemOut])
-async def my_top_agents(
-    days: int = Query(30, ge=1, le=365),
-    limit: int = Query(5, ge=1, le=20),
-    user: CurrentUser = Depends(get_current_user),
-    session: AsyncSession = Depends(get_session),
-) -> list[MyTopItemOut]:
-    """This person's most-used agents, by session count."""
-    oid, upn = await _me_identity(user, session)
-    name = func.coalesce(CoworkEvent.agent_name, CoworkEvent.app_host, "Cowork")
-    rows = (
-        await session.execute(
-            select(name.label("name"), func.count().label("value"))
-            .where(_my_event_cond(oid, upn), _event_window(days))
-            .group_by(name)
-            .order_by(func.count().desc())
-            .limit(limit)
-        )
-    ).all()
-    return [MyTopItemOut(name=r.name, value=int(r.value)) for r in rows]
 
 
 @me_router.get("/top-tools", response_model=list[MyTopItemOut])
@@ -1335,8 +1349,6 @@ async def briefing(
         ).all()
         return {r.name: int(r.value) for r in rows}
 
-    cur_agents = await _top(CoworkEvent.agent_name, cur_start_dt, None)
-    prev_agents = await _top(CoworkEvent.agent_name, prev_start_dt, cur_start_dt, 50)
 
     rg_rows = (
         await session.execute(
@@ -1392,12 +1404,6 @@ async def briefing(
         licensed_users=licensed,
         active_licensed_users=active_licensed,
         idle_licensed_users=max(licensed - active_licensed, 0),
-        top_agents=[
-            BriefingItemOut(
-                name=name, value=value, previous=prev_agents.get(name, 0)
-            )
-            for name, value in cur_agents.items()
-        ],
         top_resource_groups=[
             BriefingItemOut(
                 name=r.name,
