@@ -123,7 +123,7 @@ async def health() -> JSONResponse:
 
 
 def _register_routers() -> None:
-    from api.routers import admin, auth, metrics, upload
+    from api.routers import admin, auth, branding, metrics, upload
 
     app.include_router(auth.router)
     app.include_router(admin.router)
@@ -131,6 +131,12 @@ def _register_routers() -> None:
     app.include_router(metrics.common_router)
     app.include_router(metrics.me_router)
     app.include_router(upload.router)
+    # Branding must be registered here, before _mount_frontend() below.
+    # After it, the SPA catch-all would swallow these paths and return
+    # index.html with a 200 — which looks like success everywhere except
+    # the browser.
+    app.include_router(branding.public_router)
+    app.include_router(branding.admin_router)
 
 
 _register_routers()

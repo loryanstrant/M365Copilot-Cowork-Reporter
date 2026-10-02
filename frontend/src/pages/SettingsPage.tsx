@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import BrandingCard from "../components/BrandingCard";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import type { AppConfig, TestConnection } from "../api/types";
@@ -389,6 +390,10 @@ export default function SettingsPage() {
           </div>
         )}
       </ChartCard>
+
+      {/* Branding last: the connection and schedule settings are what an
+          admin must do, this is what they want to do. */}
+      <BrandingCard />
     </div>
   );
 }
