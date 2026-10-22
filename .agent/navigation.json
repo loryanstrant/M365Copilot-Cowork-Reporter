@@ -1,0 +1,3011 @@
+{
+  "schema_version": "1.0",
+  "repository": "M365Copilot-Cowork-Reporter",
+  "identity": {
+    "description": "Self-hosted consumption and usage reporting for **Microsoft 365 Copilot Cowork**. Cowork has no",
+    "default_branch": "main",
+    "languages": {
+      "Python": 60,
+      "TypeScript": 46,
+      "JavaScript": 2
+    },
+    "topics": [],
+    "licence": "MIT License",
+    "file_count": 193
+  },
+  "start_here": {
+    "readme": "README.md",
+    "agents_md": "AGENTS.md",
+    "entry_points": [
+      "api/main.py",
+      "frontend/src/main.tsx",
+      "worker/main.py"
+    ],
+    "decision_records": [],
+    "build_config": [
+      "frontend/package.json",
+      "frontend/tsconfig.json",
+      "frontend/vite.config.ts",
+      "pyproject.toml"
+    ],
+    "source_roots": [
+      "scripts",
+      "api",
+      "frontend",
+      "shared",
+      "worker"
+    ]
+  },
+  "documentation": [
+    {
+      "path": ".github/copilot-instructions.md",
+      "title": "Copilot instructions — M365 Copilot Cowork Reporter",
+      "lines": 86,
+      "headings": [
+        {
+          "level": 2,
+          "text": "What this project is",
+          "anchor": "what-this-project-is"
+        },
+        {
+          "level": 2,
+          "text": "Stack (do not substitute without being asked)",
+          "anchor": "stack-do-not-substitute-without-being-asked"
+        },
+        {
+          "level": 2,
+          "text": "Consumption vs Usage — MANDATORY",
+          "anchor": "consumption-vs-usage--mandatory"
+        },
+        {
+          "level": 2,
+          "text": "Cowork identification in Purview audit",
+          "anchor": "cowork-identification-in-purview-audit"
+        },
+        {
+          "level": 2,
+          "text": "Permissions",
+          "anchor": "permissions"
+        },
+        {
+          "level": 2,
+          "text": "Collectors",
+          "anchor": "collectors"
+        },
+        {
+          "level": 2,
+          "text": "Security & auth",
+          "anchor": "security--auth"
+        },
+        {
+          "level": 2,
+          "text": "UI conventions",
+          "anchor": "ui-conventions"
+        },
+        {
+          "level": 2,
+          "text": "Don't",
+          "anchor": "dont"
+        }
+      ]
+    },
+    {
+      "path": "README.md",
+      "title": "M365 Copilot Cowork Reporter",
+      "lines": 465,
+      "headings": [
+        {
+          "level": 2,
+          "text": "Screenshots",
+          "anchor": "screenshots"
+        },
+        {
+          "level": 3,
+          "text": "Your activity",
+          "anchor": "your-activity"
+        },
+        {
+          "level": 3,
+          "text": "Executive briefing",
+          "anchor": "executive-briefing"
+        },
+        {
+          "level": 3,
+          "text": "Overview",
+          "anchor": "overview"
+        },
+        {
+          "level": 3,
+          "text": "Tenant users",
+          "anchor": "tenant-users"
+        },
+        {
+          "level": 3,
+          "text": "Scan history",
+          "anchor": "scan-history"
+        },
+        {
+          "level": 3,
+          "text": "Consumption",
+          "anchor": "consumption"
+        },
+        {
+          "level": 3,
+          "text": "Usage",
+          "anchor": "usage"
+        },
+        {
+          "level": 3,
+          "text": "Settings",
+          "anchor": "settings"
+        },
+        {
+          "level": 3,
+          "text": "About",
+          "anchor": "about"
+        },
+        {
+          "level": 3,
+          "text": "Sign in",
+          "anchor": "sign-in"
+        },
+        {
+          "level": 2,
+          "text": "Deploy to Azure (one click)",
+          "anchor": "deploy-to-azure-one-click"
+        },
+        {
+          "level": 2,
+          "text": "After it's deployed",
+          "anchor": "after-its-deployed"
+        },
+        {
+          "level": 3,
+          "text": "Enabling Entra ID single sign-on (optional)",
+          "anchor": "enabling-entra-id-single-sign-on-optional"
+        },
+        {
+          "level": 3,
+          "text": "Your activity vs. the organisation view",
+          "anchor": "your-activity-vs-the-organisation-view"
+        },
+        {
+          "level": 3,
+          "text": "Where to find run history, logs, and errors",
+          "anchor": "where-to-find-run-history-logs-and-errors"
+        },
+        {
+          "level": 2,
+          "text": "What it does",
+          "anchor": "what-it-does"
+        },
+        {
+          "level": 3,
+          "text": "How Cowork is identified in Purview audit",
+          "anchor": "how-cowork-is-identified-in-purview-audit"
+        },
+        {
+          "level": 3,
+          "text": "Who an audit event belongs to",
+          "anchor": "who-an-audit-event-belongs-to"
+        },
+        {
+          "level": 2,
+          "text": "Prerequisites & permissions",
+          "anchor": "prerequisites--permissions"
+        },
+        {
+          "level": 3,
+          "text": "The two CSV uploads",
+          "anchor": "the-two-csv-uploads"
+        },
+        {
+          "level": 2,
+          "text": "Quick start (local)",
+          "anchor": "quick-start-local"
+        },
+        {
+          "level": 3,
+          "text": "Developing against it",
+          "anchor": "developing-against-it"
+        },
+        {
+          "level": 2,
+          "text": "First-run checklist",
+          "anchor": "first-run-checklist"
+        },
+        {
+          "level": 2,
+          "text": "Data & privacy notes",
+          "anchor": "data--privacy-notes"
+        },
+        {
+          "level": 2,
+          "text": "License",
+          "anchor": "license"
+        }
+      ]
+    },
+    {
+      "path": "docs/demo-guide.md",
+      "title": "Demo guide — M365 Copilot Cowork Reporter",
+      "lines": 285,
+      "headings": [
+        {
+          "level": 2,
+          "text": "1. The 60-second pitch",
+          "anchor": "1-the-60-second-pitch"
+        },
+        {
+          "level": 2,
+          "text": "2. Before you start",
+          "anchor": "2-before-you-start"
+        },
+        {
+          "level": 2,
+          "text": "3. The click path",
+          "anchor": "3-the-click-path"
+        },
+        {
+          "level": 3,
+          "text": "1. Your activity (/me)",
+          "anchor": "1-your-activity-me"
+        },
+        {
+          "level": 3,
+          "text": "2. Overview (/overview)",
+          "anchor": "2-overview-overview"
+        },
+        {
+          "level": 3,
+          "text": "3. Executive briefing (/briefing)",
+          "anchor": "3-executive-briefing-briefing"
+        },
+        {
+          "level": 3,
+          "text": "4. Consumption (/consumption)",
+          "anchor": "4-consumption-consumption"
+        },
+        {
+          "level": 3,
+          "text": "5. Chargeback (/billing-policies)",
+          "anchor": "5-chargeback-billing-policies"
+        },
+        {
+          "level": 3,
+          "text": "6. Usage (/usage)",
+          "anchor": "6-usage-usage"
+        },
+        {
+          "level": 3,
+          "text": "7. Tenant users (/users)",
+          "anchor": "7-tenant-users-users"
+        },
+        {
+          "level": 3,
+          "text": "8. If you have time: Scan history (/scan-history)",
+          "anchor": "8-if-you-have-time-scan-history-scan-history"
+        },
+        {
+          "level": 2,
+          "text": "4. Three questions executives will ask",
+          "anchor": "4-three-questions-executives-will-ask"
+        },
+        {
+          "level": 2,
+          "text": "5. If it breaks",
+          "anchor": "5-if-it-breaks"
+        },
+        {
+          "level": 2,
+          "text": "6. What NOT to promise",
+          "anchor": "6-what-not-to-promise"
+        },
+        {
+          "level": 2,
+          "text": "7. Everything on screen is fake",
+          "anchor": "7-everything-on-screen-is-fake"
+        },
+        {
+          "level": 2,
+          "text": "Shutting the demo down after the event",
+          "anchor": "shutting-the-demo-down-after-the-event"
+        }
+      ]
+    },
+    {
+      "path": "docs/deploy.md",
+      "title": "Deploying the M365 Copilot Cowork Reporter",
+      "lines": 117,
+      "headings": [
+        {
+          "level": 2,
+          "text": "1. One-click button",
+          "anchor": "1-one-click-button"
+        },
+        {
+          "level": 3,
+          "text": "For end users",
+          "anchor": "for-end-users"
+        },
+        {
+          "level": 3,
+          "text": "Choosing a region and database size",
+          "anchor": "choosing-a-region-and-database-size"
+        },
+        {
+          "level": 3,
+          "text": "For maintainers (one-time, so the button works for everyone)",
+          "anchor": "for-maintainers-one-time-so-the-button-works-for-everyone"
+        },
+        {
+          "level": 2,
+          "text": "2. azd (build from source)",
+          "anchor": "2-azd-build-from-source"
+        },
+        {
+          "level": 2,
+          "text": "After deployment",
+          "anchor": "after-deployment"
+        },
+        {
+          "level": 2,
+          "text": "Entra single sign-on (optional)",
+          "anchor": "entra-single-sign-on-optional"
+        },
+        {
+          "level": 2,
+          "text": "Updating a deployment",
+          "anchor": "updating-a-deployment"
+        },
+        {
+          "level": 2,
+          "text": "Troubleshooting",
+          "anchor": "troubleshooting"
+        }
+      ]
+    },
+    {
+      "path": "docs/screenshots/README.md",
+      "title": "How these screenshots are produced",
+      "lines": 96,
+      "headings": [
+        {
+          "level": 2,
+          "text": "What is shown",
+          "anchor": "what-is-shown"
+        },
+        {
+          "level": 2,
+          "text": "The recipe",
+          "anchor": "the-recipe"
+        },
+        {
+          "level": 2,
+          "text": "Checks worth doing before you keep a shot",
+          "anchor": "checks-worth-doing-before-you-keep-a-shot"
+        },
+        {
+          "level": 2,
+          "text": "The set",
+          "anchor": "the-set"
+        }
+      ]
+    },
+    {
+      "path": "docs/specs/comparisons-and-timelines.md",
+      "title": "Spec — peer comparisons, timelines and scan history",
+      "lines": 264,
+      "headings": [
+        {
+          "level": 2,
+          "text": "Problem",
+          "anchor": "problem"
+        },
+        {
+          "level": 2,
+          "text": "Non-goals",
+          "anchor": "non-goals"
+        },
+        {
+          "level": 2,
+          "text": "Decisions taken",
+          "anchor": "decisions-taken"
+        },
+        {
+          "level": 2,
+          "text": "Definitions",
+          "anchor": "definitions"
+        },
+        {
+          "level": 2,
+          "text": "Flows",
+          "anchor": "flows"
+        },
+        {
+          "level": 3,
+          "text": "Seeing how you compare",
+          "anchor": "seeing-how-you-compare"
+        },
+        {
+          "level": 3,
+          "text": "Agent Quality learning who its creators are",
+          "anchor": "agent-quality-learning-who-its-creators-are"
+        },
+        {
+          "level": 3,
+          "text": "Checking a collection actually ran",
+          "anchor": "checking-a-collection-actually-ran"
+        },
+        {
+          "level": 3,
+          "text": "Seeing the shape of your usage",
+          "anchor": "seeing-the-shape-of-your-usage"
+        },
+        {
+          "level": 3,
+          "text": "Agent Quality's history becoming a timeline",
+          "anchor": "agent-qualitys-history-becoming-a-timeline"
+        },
+        {
+          "level": 2,
+          "text": "Acceptance criteria",
+          "anchor": "acceptance-criteria"
+        },
+        {
+          "level": 2,
+          "text": "Verification",
+          "anchor": "verification"
+        }
+      ]
+    },
+    {
+      "path": "docs/specs/customer-branding.md",
+      "title": "Spec — customer branding",
+      "lines": 184,
+      "headings": [
+        {
+          "level": 2,
+          "text": "Problem",
+          "anchor": "problem"
+        },
+        {
+          "level": 2,
+          "text": "Non-goals",
+          "anchor": "non-goals"
+        },
+        {
+          "level": 2,
+          "text": "Flows",
+          "anchor": "flows"
+        },
+        {
+          "level": 3,
+          "text": "Setting branding (admin)",
+          "anchor": "setting-branding-admin"
+        },
+        {
+          "level": 3,
+          "text": "Seeing branding (everyone)",
+          "anchor": "seeing-branding-everyone"
+        },
+        {
+          "level": 2,
+          "text": "Acceptance criteria",
+          "anchor": "acceptance-criteria"
+        },
+        {
+          "level": 3,
+          "text": "Unchanged by default",
+          "anchor": "unchanged-by-default"
+        },
+        {
+          "level": 3,
+          "text": "Colour",
+          "anchor": "colour"
+        },
+        {
+          "level": 3,
+          "text": "Logo",
+          "anchor": "logo"
+        },
+        {
+          "level": 3,
+          "text": "Accessibility and layout",
+          "anchor": "accessibility-and-layout"
+        },
+        {
+          "level": 3,
+          "text": "Hygiene",
+          "anchor": "hygiene"
+        },
+        {
+          "level": 2,
+          "text": "Sample brand for testing",
+          "anchor": "sample-brand-for-testing"
+        }
+      ]
+    },
+    {
+      "path": "docs/specs/suite-consistency-pass.md",
+      "title": "Spec — Copilot reporting suite consistency pass",
+      "lines": 171,
+      "headings": [
+        {
+          "level": 2,
+          "text": "Problem",
+          "anchor": "problem"
+        },
+        {
+          "level": 2,
+          "text": "Non-goals",
+          "anchor": "non-goals"
+        },
+        {
+          "level": 2,
+          "text": "Flows",
+          "anchor": "flows"
+        },
+        {
+          "level": 3,
+          "text": "Granting admin to a group",
+          "anchor": "granting-admin-to-a-group"
+        },
+        {
+          "level": 3,
+          "text": "Seeing who is signed in",
+          "anchor": "seeing-who-is-signed-in"
+        },
+        {
+          "level": 3,
+          "text": "Counting a Copilot licence",
+          "anchor": "counting-a-copilot-licence"
+        },
+        {
+          "level": 3,
+          "text": "Evaluating with demo data",
+          "anchor": "evaluating-with-demo-data"
+        },
+        {
+          "level": 2,
+          "text": "Acceptance criteria",
+          "anchor": "acceptance-criteria"
+        },
+        {
+          "level": 2,
+          "text": "Brand",
+          "anchor": "brand"
+        },
+        {
+          "level": 2,
+          "text": "Verification",
+          "anchor": "verification"
+        }
+      ]
+    }
+  ],
+  "code": {
+    "source_roots": [
+      "scripts",
+      "api",
+      "frontend",
+      "shared",
+      "worker"
+    ],
+    "symbol_source": "repomix (tree-sitter signatures)",
+    "routes": [
+      "api/__init__.py",
+      "api/auth.py",
+      "api/main.py",
+      "api/metrics.py",
+      "api/oidc.py",
+      "api/routers/__init__.py",
+      "api/routers/admin.py",
+      "api/routers/auth.py",
+      "api/routers/branding.py",
+      "api/routers/metrics.py",
+      "api/routers/upload.py",
+      "api/schemas.py",
+      "frontend/src/api/client.ts",
+      "frontend/src/api/types.ts",
+      "frontend/src/pages/AboutPage.tsx",
+      "frontend/src/pages/BillingPolicyPage.tsx",
+      "frontend/src/pages/BriefingPage.tsx",
+      "frontend/src/pages/ConsumptionPage.tsx",
+      "frontend/src/pages/HelpPage.tsx",
+      "frontend/src/pages/LoginPage.tsx",
+      "frontend/src/pages/OverviewPage.tsx",
+      "frontend/src/pages/PersonalPage.tsx",
+      "frontend/src/pages/ScanHistoryPage.tsx",
+      "frontend/src/pages/SettingsPage.tsx",
+      "frontend/src/pages/UploadPage.tsx",
+      "frontend/src/pages/UsagePage.tsx",
+      "frontend/src/pages/UsersPage.tsx"
+    ],
+    "files": [
+      {
+        "path": "api/auth.py",
+        "symbols": [
+          {
+            "kind": "class",
+            "name": "CurrentUser",
+            "parent": "",
+            "signature": "class CurrentUser(BaseModel)"
+          },
+          {
+            "kind": "function",
+            "name": "has_personal_view",
+            "parent": "CurrentUser",
+            "signature": "has_personal_view(self) -> bool"
+          },
+          {
+            "kind": "function",
+            "name": "is_admin",
+            "parent": "",
+            "signature": "is_admin(user: CurrentUser, session: AsyncSession) -> bool"
+          },
+          {
+            "kind": "function",
+            "name": "effective_role",
+            "parent": "",
+            "signature": "effective_role(user: CurrentUser, session: AsyncSession) -> str"
+          },
+          {
+            "kind": "function",
+            "name": "can_view_org",
+            "parent": "",
+            "signature": "can_view_org(user: CurrentUser, session: AsyncSession) -> bool"
+          }
+        ]
+      },
+      {
+        "path": "api/main.py",
+        "symbols": [
+          {
+            "kind": "function",
+            "name": "lifespan",
+            "parent": "",
+            "signature": "lifespan(_: FastAPI)"
+          },
+          {
+            "kind": "route",
+            "name": "health",
+            "parent": "",
+            "signature": "@app.get(\"/health\", tags=[\"system\"]) -> health() -> JSONResponse"
+          },
+          {
+            "kind": "const",
+            "name": "ASSET_CACHE",
+            "parent": "",
+            "signature": "ASSET_CACHE = \"public, max-age=31536000, immutable\""
+          },
+          {
+            "kind": "const",
+            "name": "HTML_CACHE",
+            "parent": "",
+            "signature": "HTML_CACHE = \"no-cache\"  # revalidate every time; the file is ~0.5 KB"
+          },
+          {
+            "kind": "class",
+            "name": "ImmutableAssets",
+            "parent": "",
+            "signature": "class ImmutableAssets(StaticFiles)"
+          },
+          {
+            "kind": "function",
+            "name": "get_response",
+            "parent": "ImmutableAssets",
+            "signature": "get_response(self, path: str, scope)"
+          },
+          {
+            "kind": "route",
+            "name": "spa_fallback",
+            "parent": "",
+            "signature": "@app.get(\"/{full_path:path}\", include_in_schema=False) -> spa_fallback(full_path: str) -> FileResponse"
+          }
+        ]
+      },
+      {
+        "path": "api/metrics.py",
+        "symbols": [
+          {
+            "kind": "const",
+            "name": "JOB_KIND_LABELS",
+            "parent": "",
+            "signature": "JOB_KIND_LABELS ="
+          },
+          {
+            "kind": "const",
+            "name": "JOB_STATUS_STATE",
+            "parent": "",
+            "signature": "JOB_STATUS_STATE ="
+          },
+          {
+            "kind": "function",
+            "name": "scan_history",
+            "parent": "",
+            "signature": "scan_history(session: AsyncSession, *, limit: int = 100) -> list[dict[str, Any]]"
+          }
+        ]
+      },
+      {
+        "path": "api/oidc.py",
+        "symbols": [
+          {
+            "kind": "const",
+            "name": "STATE_COOKIE",
+            "parent": "",
+            "signature": "STATE_COOKIE = \"cowork_oidc_flow\""
+          },
+          {
+            "kind": "const",
+            "name": "STATE_TTL_SECONDS",
+            "parent": "",
+            "signature": "STATE_TTL_SECONDS = 600"
+          },
+          {
+            "kind": "const",
+            "name": "CALLBACK_PATH",
+            "parent": "",
+            "signature": "CALLBACK_PATH = \"/auth/oidc/callback\""
+          },
+          {
+            "kind": "class",
+            "name": "Principal",
+            "parent": "",
+            "signature": "class Principal"
+          },
+          {
+            "kind": "class",
+            "name": "OidcNotConfigured",
+            "parent": "",
+            "signature": "class OidcNotConfigured(RuntimeError)"
+          },
+          {
+            "kind": "function",
+            "name": "is_configured",
+            "parent": "",
+            "signature": "is_configured(cfg: AppConfig | None) -> bool"
+          },
+          {
+            "kind": "function",
+            "name": "public_base_url",
+            "parent": "",
+            "signature": "public_base_url(request: Request) -> str"
+          },
+          {
+            "kind": "function",
+            "name": "redirect_uri",
+            "parent": "",
+            "signature": "redirect_uri(request: Request) -> str"
+          },
+          {
+            "kind": "function",
+            "name": "reset_app_cache",
+            "parent": "",
+            "signature": "reset_app_cache() -> None"
+          },
+          {
+            "kind": "function",
+            "name": "begin_flow",
+            "parent": "",
+            "signature": "begin_flow(cfg: AppConfig, request: Request) -> tuple[str, str]"
+          },
+          {
+            "kind": "function",
+            "name": "reset_group_cache",
+            "parent": "",
+            "signature": "reset_group_cache() -> None"
+          }
+        ]
+      },
+      {
+        "path": "api/routers/admin.py",
+        "symbols": [
+          {
+            "kind": "route",
+            "name": "get_config",
+            "parent": "",
+            "signature": "@router.get(\"/config\", response_model=AppConfigOut) -> get_config(session: AsyncSession = Depends(get_session)) -> AppConfigOut"
+          },
+          {
+            "kind": "route",
+            "name": "test_conn",
+            "parent": "",
+            "signature": "@router.post(\"/test-connection\", response_model=TestConnectionOut) -> test_conn(session: AsyncSession = Depends(get_session)) -> TestConnectionOut"
+          },
+          {
+            "kind": "route",
+            "name": "users_refresh",
+            "parent": "",
+            "signature": "@router.post(\"/users/refresh\", response_model=IngestRunOut) -> users_refresh(background: BackgroundTasks) -> IngestRunOut"
+          },
+          {
+            "kind": "route",
+            "name": "ingest_run",
+            "parent": "",
+            "signature": "@router.post(\"/ingest/run\", response_model=IngestRunOut) -> ingest_run(background: BackgroundTasks) -> IngestRunOut"
+          },
+          {
+            "kind": "route",
+            "name": "backfill_progress",
+            "parent": "",
+            "signature": "@router.get(\"/backfill/progress\") -> backfill_progress() -> dict"
+          },
+          {
+            "kind": "route",
+            "name": "backfill_cancel",
+            "parent": "",
+            "signature": "@router.post(\"/backfill/cancel\", response_model=IngestRunOut) -> backfill_cancel() -> IngestRunOut"
+          },
+          {
+            "kind": "route",
+            "name": "seed_demo",
+            "parent": "",
+            "signature": "@router.post(\"/seed-demo\", response_model=IngestRunOut) -> seed_demo(reset: bool = True) -> IngestRunOut"
+          },
+          {
+            "kind": "route",
+            "name": "clear_demo",
+            "parent": "",
+            "signature": "@router.post(\"/clear-demo\", response_model=IngestRunOut) -> clear_demo() -> IngestRunOut"
+          },
+          {
+            "kind": "route",
+            "name": "status",
+            "parent": "",
+            "signature": "@router.get(\"/status\", response_model=StatusOut) -> status(session: AsyncSession = Depends(get_session)) -> StatusOut"
+          }
+        ]
+      },
+      {
+        "path": "api/routers/branding.py",
+        "symbols": [
+          {
+            "kind": "const",
+            "name": "MAX_LOGO_BYTES",
+            "parent": "",
+            "signature": "MAX_LOGO_BYTES = 1024 * 1024"
+          },
+          {
+            "kind": "const",
+            "name": "VARIANTS",
+            "parent": "",
+            "signature": "VARIANTS = (\"light\", \"dark\")"
+          },
+          {
+            "kind": "const",
+            "name": "LOGO_HEADERS",
+            "parent": "",
+            "signature": "LOGO_HEADERS ="
+          },
+          {
+            "kind": "route",
+            "name": "get_branding",
+            "parent": "",
+            "signature": "@public_router.get(\"\", response_model=BrandingOut) -> get_branding(session: AsyncSession = Depends(get_session)) -> BrandingOut"
+          },
+          {
+            "kind": "route",
+            "name": "preview_ramp",
+            "parent": "",
+            "signature": "@admin_router.post(\"/preview\", response_model=RampPreviewOut) -> preview_ramp(body: RampPreviewIn) -> RampPreviewOut"
+          }
+        ]
+      },
+      {
+        "path": "api/routers/metrics.py",
+        "symbols": [
+          {
+            "kind": "route",
+            "name": "get_about",
+            "parent": "",
+            "signature": "@common_router.get(\"/about\") -> get_about() -> dict"
+          },
+          {
+            "kind": "route",
+            "name": "get_freshness",
+            "parent": "",
+            "signature": "@common_router.get(\"/freshness\") -> get_freshness(session: AsyncSession = Depends(get_session)) -> dict"
+          },
+          {
+            "kind": "class",
+            "name": "json_array_len",
+            "parent": "",
+            "signature": "class json_array_len(GenericFunction)"
+          },
+          {
+            "kind": "function",
+            "name": "value_of",
+            "parent": "",
+            "signature": "value_of(row) -> int"
+          }
+        ]
+      },
+      {
+        "path": "api/schemas.py",
+        "symbols": [
+          {
+            "kind": "class",
+            "name": "LoginIn",
+            "parent": "",
+            "signature": "class LoginIn(BaseModel)"
+          },
+          {
+            "kind": "class",
+            "name": "TokenOut",
+            "parent": "",
+            "signature": "class TokenOut(BaseModel)"
+          },
+          {
+            "kind": "class",
+            "name": "UserOut",
+            "parent": "",
+            "signature": "class UserOut(BaseModel)"
+          },
+          {
+            "kind": "class",
+            "name": "AuthConfigOut",
+            "parent": "",
+            "signature": "class AuthConfigOut(BaseModel)"
+          },
+          {
+            "kind": "class",
+            "name": "AppConfigIn",
+            "parent": "",
+            "signature": "class AppConfigIn(BaseModel)"
+          },
+          {
+            "kind": "class",
+            "name": "AppConfigOut",
+            "parent": "",
+            "signature": "class AppConfigOut(BaseModel)"
+          },
+          {
+            "kind": "class",
+            "name": "TestConnectionOut",
+            "parent": "",
+            "signature": "class TestConnectionOut(BaseModel)"
+          },
+          {
+            "kind": "class",
+            "name": "IngestRunOut",
+            "parent": "",
+            "signature": "class IngestRunOut(BaseModel)"
+          },
+          {
+            "kind": "class",
+            "name": "JobRunOut",
+            "parent": "",
+            "signature": "class JobRunOut(BaseModel)"
+          },
+          {
+            "kind": "class",
+            "name": "ScanRunOut",
+            "parent": "",
+            "signature": "class ScanRunOut(BaseModel)"
+          },
+          {
+            "kind": "class",
+            "name": "StatusOut",
+            "parent": "",
+            "signature": "class StatusOut(BaseModel)"
+          },
+          {
+            "kind": "class",
+            "name": "UploadResultOut",
+            "parent": "",
+            "signature": "class UploadResultOut(BaseModel)"
+          },
+          {
+            "kind": "class",
+            "name": "BillingPolicyIn",
+            "parent": "",
+            "signature": "class BillingPolicyIn(BaseModel)"
+          },
+          {
+            "kind": "class",
+            "name": "BillingPolicyOut",
+            "parent": "",
+            "signature": "class BillingPolicyOut(BillingPolicyIn)"
+          },
+          {
+            "kind": "class",
+            "name": "KpiOut",
+            "parent": "",
+            "signature": "class KpiOut(BaseModel)"
+          },
+          {
+            "kind": "class",
+            "name": "CostByGroupOut",
+            "parent": "",
+            "signature": "class CostByGroupOut(BaseModel)"
+          },
+          {
+            "kind": "class",
+            "name": "CostTrendOut",
+            "parent": "",
+            "signature": "class CostTrendOut(BaseModel)"
+          },
+          {
+            "kind": "class",
+            "name": "UsageByUserOut",
+            "parent": "",
+            "signature": "class UsageByUserOut(BaseModel)"
+          },
+          {
+            "kind": "class",
+            "name": "DirectoryUserOut",
+            "parent": "",
+            "signature": "class DirectoryUserOut(BaseModel)"
+          },
+          {
+            "kind": "class",
+            "name": "UsageTrendOut",
+            "parent": "",
+            "signature": "class UsageTrendOut(BaseModel)"
+          },
+          {
+            "kind": "class",
+            "name": "MySummaryOut",
+            "parent": "",
+            "signature": "class MySummaryOut(BaseModel)"
+          },
+          {
+            "kind": "class",
+            "name": "MyEventOut",
+            "parent": "",
+            "signature": "class MyEventOut(BaseModel)"
+          },
+          {
+            "kind": "class",
+            "name": "MyUsageTrendOut",
+            "parent": "",
+            "signature": "class MyUsageTrendOut(BaseModel)"
+          },
+          {
+            "kind": "class",
+            "name": "MyComparisonOut",
+            "parent": "",
+            "signature": "class MyComparisonOut(BaseModel)"
+          },
+          {
+            "kind": "class",
+            "name": "MyDayOut",
+            "parent": "",
+            "signature": "class MyDayOut(BaseModel)"
+          },
+          {
+            "kind": "class",
+            "name": "MyTopItemOut",
+            "parent": "",
+            "signature": "class MyTopItemOut(BaseModel)"
+          },
+          {
+            "kind": "class",
+            "name": "PeerStatOut",
+            "parent": "",
+            "signature": "class PeerStatOut(BaseModel)"
+          },
+          {
+            "kind": "class",
+            "name": "MyStandingOut",
+            "parent": "",
+            "signature": "class MyStandingOut(BaseModel)"
+          },
+          {
+            "kind": "class",
+            "name": "MyActivityOut",
+            "parent": "",
+            "signature": "class MyActivityOut(BaseModel)"
+          },
+          {
+            "kind": "class",
+            "name": "BriefingDeltaOut",
+            "parent": "",
+            "signature": "class BriefingDeltaOut(BaseModel)"
+          },
+          {
+            "kind": "class",
+            "name": "BriefingItemOut",
+            "parent": "",
+            "signature": "class BriefingItemOut(BaseModel)"
+          },
+          {
+            "kind": "class",
+            "name": "BriefingOut",
+            "parent": "",
+            "signature": "class BriefingOut(BaseModel)"
+          },
+          {
+            "kind": "class",
+            "name": "BrandingOut",
+            "parent": "",
+            "signature": "class BrandingOut(BaseModel)"
+          },
+          {
+            "kind": "class",
+            "name": "BrandingIn",
+            "parent": "",
+            "signature": "class BrandingIn(BaseModel)"
+          },
+          {
+            "kind": "class",
+            "name": "BrandingAdminOut",
+            "parent": "",
+            "signature": "class BrandingAdminOut(BrandingOut)"
+          },
+          {
+            "kind": "class",
+            "name": "RampPreviewIn",
+            "parent": "",
+            "signature": "class RampPreviewIn(BaseModel)"
+          },
+          {
+            "kind": "class",
+            "name": "RampPreviewOut",
+            "parent": "",
+            "signature": "class RampPreviewOut(BaseModel)"
+          }
+        ]
+      },
+      {
+        "path": "frontend/src/App.tsx",
+        "symbols": [
+          {
+            "kind": "const",
+            "name": "adminOnly",
+            "parent": "",
+            "signature": "const adminOnly = (el: JSX.Element)"
+          }
+        ]
+      },
+      {
+        "path": "frontend/src/api/client.ts",
+        "symbols": [
+          {
+            "kind": "function",
+            "name": "getToken",
+            "parent": "",
+            "signature": "export function getToken(): string | null"
+          },
+          {
+            "kind": "function",
+            "name": "setToken",
+            "parent": "",
+            "signature": "export function setToken(token: string | null): void"
+          },
+          {
+            "kind": "class",
+            "name": "ApiError",
+            "parent": "",
+            "signature": "export class ApiError extends Error"
+          },
+          {
+            "kind": "function",
+            "name": "api",
+            "parent": "",
+            "signature": "export async function api<T>(path: string, options: RequestInit ="
+          },
+          {
+            "kind": "function",
+            "name": "upload",
+            "parent": "",
+            "signature": "export async function upload<T>(path: string, form: FormData): Promise<T>"
+          },
+          {
+            "kind": "function",
+            "name": "patch",
+            "parent": "",
+            "signature": "export async function patch<T>(path: string, form: FormData): Promise<T>"
+          }
+        ]
+      },
+      {
+        "path": "frontend/src/api/types.ts",
+        "symbols": [
+          {
+            "kind": "interface",
+            "name": "User",
+            "parent": "",
+            "signature": "export interface User"
+          },
+          {
+            "kind": "interface",
+            "name": "MySummary",
+            "parent": "",
+            "signature": "export interface MySummary"
+          },
+          {
+            "kind": "interface",
+            "name": "MyEvent",
+            "parent": "",
+            "signature": "export interface MyEvent"
+          },
+          {
+            "kind": "interface",
+            "name": "MyComparison",
+            "parent": "",
+            "signature": "export interface MyComparison"
+          },
+          {
+            "kind": "interface",
+            "name": "Kpis",
+            "parent": "",
+            "signature": "export interface Kpis"
+          },
+          {
+            "kind": "interface",
+            "name": "CostByGroup",
+            "parent": "",
+            "signature": "export interface CostByGroup"
+          },
+          {
+            "kind": "interface",
+            "name": "CostTrend",
+            "parent": "",
+            "signature": "export interface CostTrend"
+          },
+          {
+            "kind": "interface",
+            "name": "UsageByUser",
+            "parent": "",
+            "signature": "export interface UsageByUser"
+          },
+          {
+            "kind": "interface",
+            "name": "DirectoryUser",
+            "parent": "",
+            "signature": "export interface DirectoryUser"
+          },
+          {
+            "kind": "interface",
+            "name": "UsageTrend",
+            "parent": "",
+            "signature": "export interface UsageTrend"
+          },
+          {
+            "kind": "interface",
+            "name": "AppConfig",
+            "parent": "",
+            "signature": "export interface AppConfig"
+          },
+          {
+            "kind": "interface",
+            "name": "TestConnection",
+            "parent": "",
+            "signature": "export interface TestConnection"
+          },
+          {
+            "kind": "interface",
+            "name": "Status",
+            "parent": "",
+            "signature": "export interface Status"
+          },
+          {
+            "kind": "interface",
+            "name": "BillingPolicy",
+            "parent": "",
+            "signature": "export interface BillingPolicy"
+          },
+          {
+            "kind": "interface",
+            "name": "UploadResult",
+            "parent": "",
+            "signature": "export interface UploadResult"
+          },
+          {
+            "kind": "interface",
+            "name": "MyActivity",
+            "parent": "",
+            "signature": "export interface MyActivity"
+          },
+          {
+            "kind": "interface",
+            "name": "MyDay",
+            "parent": "",
+            "signature": "export interface MyDay"
+          },
+          {
+            "kind": "interface",
+            "name": "MyTopItem",
+            "parent": "",
+            "signature": "export interface MyTopItem"
+          },
+          {
+            "kind": "interface",
+            "name": "PeerStat",
+            "parent": "",
+            "signature": "export interface PeerStat"
+          },
+          {
+            "kind": "interface",
+            "name": "MyStanding",
+            "parent": "",
+            "signature": "export interface MyStanding"
+          },
+          {
+            "kind": "interface",
+            "name": "BriefingDelta",
+            "parent": "",
+            "signature": "export interface BriefingDelta"
+          },
+          {
+            "kind": "interface",
+            "name": "BriefingItem",
+            "parent": "",
+            "signature": "export interface BriefingItem"
+          },
+          {
+            "kind": "interface",
+            "name": "Briefing",
+            "parent": "",
+            "signature": "export interface Briefing"
+          },
+          {
+            "kind": "interface",
+            "name": "Branding",
+            "parent": "",
+            "signature": "export interface Branding"
+          },
+          {
+            "kind": "interface",
+            "name": "BrandingAdmin",
+            "parent": "",
+            "signature": "export interface BrandingAdmin extends Branding"
+          },
+          {
+            "kind": "interface",
+            "name": "RampPreview",
+            "parent": "",
+            "signature": "export interface RampPreview"
+          }
+        ]
+      },
+      {
+        "path": "frontend/src/auth/AuthContext.tsx",
+        "symbols": [
+          {
+            "kind": "interface",
+            "name": "AuthContextValue",
+            "parent": "",
+            "signature": "interface AuthContextValue"
+          },
+          {
+            "kind": "function",
+            "name": "AuthProvider",
+            "parent": "",
+            "signature": "export function AuthProvider("
+          },
+          {
+            "kind": "const",
+            "name": "onUnauthorized",
+            "parent": "",
+            "signature": "const onUnauthorized = ()"
+          },
+          {
+            "kind": "function",
+            "name": "login",
+            "parent": "",
+            "signature": "async function login(username: string, password: string)"
+          },
+          {
+            "kind": "function",
+            "name": "logout",
+            "parent": "",
+            "signature": "function logout()"
+          },
+          {
+            "kind": "const",
+            "name": "useAuth",
+            "parent": "",
+            "signature": "export const useAuth = ()"
+          }
+        ]
+      },
+      {
+        "path": "frontend/src/branding/BrandingContext.tsx",
+        "symbols": [
+          {
+            "kind": "interface",
+            "name": "BrandingCtx",
+            "parent": "",
+            "signature": "interface BrandingCtx"
+          },
+          {
+            "kind": "function",
+            "name": "BrandingProvider",
+            "parent": "",
+            "signature": "export function BrandingProvider("
+          }
+        ]
+      },
+      {
+        "path": "frontend/src/branding/applyBranding.ts",
+        "symbols": [
+          {
+            "kind": "function",
+            "name": "toChannels",
+            "parent": "",
+            "signature": "function toChannels(hex: string): string"
+          },
+          {
+            "kind": "function",
+            "name": "block",
+            "parent": "",
+            "signature": "function block(selector: string, ramp: Record<string, string>): string"
+          },
+          {
+            "kind": "function",
+            "name": "rampCss",
+            "parent": "",
+            "signature": "export function rampCss("
+          },
+          {
+            "kind": "function",
+            "name": "applyRampCss",
+            "parent": "",
+            "signature": "export function applyRampCss(css: string): void"
+          },
+          {
+            "kind": "function",
+            "name": "setTitle",
+            "parent": "",
+            "signature": "export function setTitle(product: string, org: string | null): void"
+          },
+          {
+            "kind": "function",
+            "name": "applyCachedBranding",
+            "parent": "",
+            "signature": "export function applyCachedBranding(product: string): void"
+          },
+          {
+            "kind": "function",
+            "name": "cacheBranding",
+            "parent": "",
+            "signature": "export function cacheBranding(css: string, org: string | null): void"
+          }
+        ]
+      },
+      {
+        "path": "frontend/src/branding/logoLuminance.ts",
+        "symbols": [
+          {
+            "kind": "function",
+            "name": "channel",
+            "parent": "",
+            "signature": "function channel(value: number): number"
+          },
+          {
+            "kind": "function",
+            "name": "looksDark",
+            "parent": "",
+            "signature": "export async function looksDark(file: File): Promise<boolean | null>"
+          }
+        ]
+      },
+      {
+        "path": "frontend/src/components/ActivityTimeline.tsx",
+        "symbols": [
+          {
+            "kind": "interface",
+            "name": "TimelinePoint",
+            "parent": "",
+            "signature": "export interface TimelinePoint"
+          },
+          {
+            "kind": "interface",
+            "name": "TimelineSeries",
+            "parent": "",
+            "signature": "export interface TimelineSeries"
+          },
+          {
+            "kind": "function",
+            "name": "fillDays",
+            "parent": "",
+            "signature": "function fillDays("
+          },
+          {
+            "kind": "const",
+            "name": "iso",
+            "parent": "",
+            "signature": "const iso = (d: Date)"
+          },
+          {
+            "kind": "const",
+            "name": "at",
+            "parent": "",
+            "signature": "const at = (p: TimelinePoint)"
+          },
+          {
+            "kind": "const",
+            "name": "dayLabel",
+            "parent": "",
+            "signature": "const dayLabel = (iso: string)"
+          }
+        ]
+      },
+      {
+        "path": "frontend/src/components/AppBars.tsx",
+        "symbols": [
+          {
+            "kind": "interface",
+            "name": "AppBarRow",
+            "parent": "",
+            "signature": "export interface AppBarRow"
+          }
+        ]
+      },
+      {
+        "path": "frontend/src/components/AppLabel.tsx",
+        "symbols": [
+          {
+            "kind": "function",
+            "name": "normalise",
+            "parent": "",
+            "signature": "function normalise(name: string): string"
+          },
+          {
+            "kind": "function",
+            "name": "appLogoSrc",
+            "parent": "",
+            "signature": "export function appLogoSrc(name: string | null | undefined): string | null"
+          },
+          {
+            "kind": "function",
+            "name": "AppLabel",
+            "parent": "",
+            "signature": "export default function AppLabel("
+          }
+        ]
+      },
+      {
+        "path": "frontend/src/components/BrandingCard.tsx",
+        "symbols": [
+          {
+            "kind": "function",
+            "name": "Field",
+            "parent": "",
+            "signature": "function Field("
+          },
+          {
+            "kind": "function",
+            "name": "bannerClass",
+            "parent": "",
+            "signature": "function bannerClass(kind: \"ok\" | \"error\" | \"info\"): string"
+          },
+          {
+            "kind": "function",
+            "name": "prettyBytes",
+            "parent": "",
+            "signature": "function prettyBytes(n: number): string"
+          },
+          {
+            "kind": "function",
+            "name": "preValidate",
+            "parent": "",
+            "signature": "async function preValidate(file: File): Promise<string | null>"
+          },
+          {
+            "kind": "function",
+            "name": "previewVars",
+            "parent": "",
+            "signature": "function previewVars(ramp: Record<string, string>): React.CSSProperties"
+          },
+          {
+            "kind": "function",
+            "name": "onSave",
+            "parent": "",
+            "signature": "async function onSave()"
+          },
+          {
+            "kind": "function",
+            "name": "onPickFile",
+            "parent": "",
+            "signature": "async function onPickFile(slot: Slot, file: File | undefined)"
+          },
+          {
+            "kind": "function",
+            "name": "onRemoveLogo",
+            "parent": "",
+            "signature": "async function onRemoveLogo(slot: Slot)"
+          },
+          {
+            "kind": "function",
+            "name": "onTogglePlate",
+            "parent": "",
+            "signature": "async function onTogglePlate(next: boolean)"
+          },
+          {
+            "kind": "function",
+            "name": "onReset",
+            "parent": "",
+            "signature": "async function onReset()"
+          }
+        ]
+      },
+      {
+        "path": "frontend/src/components/CustomerLogo.tsx",
+        "symbols": [
+          {
+            "kind": "type",
+            "name": "LogoPlacement",
+            "parent": "",
+            "signature": "export type LogoPlacement = \"sidebar\" | \"login-panel\" | \"login-narrow\";"
+          }
+        ]
+      },
+      {
+        "path": "frontend/src/components/DataTable.tsx",
+        "symbols": [
+          {
+            "kind": "type",
+            "name": "ColumnType",
+            "parent": "",
+            "signature": "export type ColumnType = \"text\" | \"number\" | \"date\";"
+          },
+          {
+            "kind": "type",
+            "name": "SortDir",
+            "parent": "",
+            "signature": "export type SortDir = \"asc\" | \"desc\";"
+          },
+          {
+            "kind": "interface",
+            "name": "Column",
+            "parent": "",
+            "signature": "export interface Column<Row>"
+          },
+          {
+            "kind": "interface",
+            "name": "SortState",
+            "parent": "",
+            "signature": "export interface SortState"
+          },
+          {
+            "kind": "interface",
+            "name": "Props",
+            "parent": "",
+            "signature": "interface Props<Row>"
+          },
+          {
+            "kind": "function",
+            "name": "isEmpty",
+            "parent": "",
+            "signature": "function isEmpty(v: string | number | null | undefined): boolean"
+          },
+          {
+            "kind": "function",
+            "name": "compareValues",
+            "parent": "",
+            "signature": "function compareValues("
+          },
+          {
+            "kind": "function",
+            "name": "defaultDir",
+            "parent": "",
+            "signature": "function defaultDir(type: ColumnType): SortDir"
+          },
+          {
+            "kind": "function",
+            "name": "defaultDisplay",
+            "parent": "",
+            "signature": "function defaultDisplay(v: string | number | null | undefined): ReactNode"
+          },
+          {
+            "kind": "function",
+            "name": "toggle",
+            "parent": "",
+            "signature": "function toggle(col: Column<Row>)"
+          },
+          {
+            "kind": "const",
+            "name": "alignClass",
+            "parent": "",
+            "signature": "const alignClass = (a?: Column<Row>[\"align\"])"
+          }
+        ]
+      },
+      {
+        "path": "frontend/src/components/DemoDataCard.tsx",
+        "symbols": [
+          {
+            "kind": "interface",
+            "name": "Result",
+            "parent": "",
+            "signature": "interface Result"
+          },
+          {
+            "kind": "function",
+            "name": "DemoDataCard",
+            "parent": "",
+            "signature": "export default function DemoDataCard()"
+          },
+          {
+            "kind": "function",
+            "name": "call",
+            "parent": "",
+            "signature": "async function call(kind: \"seed\" | \"clear\")"
+          }
+        ]
+      },
+      {
+        "path": "frontend/src/components/Empty.tsx",
+        "symbols": [
+          {
+            "kind": "function",
+            "name": "Empty",
+            "parent": "",
+            "signature": "export default function Empty("
+          }
+        ]
+      },
+      {
+        "path": "frontend/src/components/KpiCard.tsx",
+        "symbols": [
+          {
+            "kind": "function",
+            "name": "KpiCard",
+            "parent": "",
+            "signature": "export default function KpiCard("
+          }
+        ]
+      },
+      {
+        "path": "frontend/src/components/Layout.tsx",
+        "symbols": [
+          {
+            "kind": "function",
+            "name": "navClass",
+            "parent": "",
+            "signature": "function navClass("
+          },
+          {
+            "kind": "function",
+            "name": "NavSectionLabel",
+            "parent": "",
+            "signature": "function NavSectionLabel("
+          }
+        ]
+      },
+      {
+        "path": "frontend/src/components/PeerComparison.tsx",
+        "symbols": [
+          {
+            "kind": "interface",
+            "name": "PeerStatShape",
+            "parent": "",
+            "signature": "export interface PeerStatShape"
+          },
+          {
+            "kind": "interface",
+            "name": "PeerStandingShape",
+            "parent": "",
+            "signature": "export interface PeerStandingShape"
+          },
+          {
+            "kind": "interface",
+            "name": "PeerMeasure",
+            "parent": "",
+            "signature": "export interface PeerMeasure"
+          },
+          {
+            "kind": "function",
+            "name": "fmtPeriod",
+            "parent": "",
+            "signature": "function fmtPeriod(from: string | null, to: string | null, days: number): string"
+          },
+          {
+            "kind": "const",
+            "name": "d",
+            "parent": "",
+            "signature": "const d = (iso: string)"
+          },
+          {
+            "kind": "function",
+            "name": "teamWithheldNote",
+            "parent": "",
+            "signature": "export function teamWithheldNote(standing: PeerStandingShape): string | null"
+          },
+          {
+            "kind": "function",
+            "name": "organisationWithheldNote",
+            "parent": "",
+            "signature": "export function organisationWithheldNote("
+          }
+        ]
+      },
+      {
+        "path": "frontend/src/components/SetupWizard.tsx",
+        "symbols": [
+          {
+            "kind": "function",
+            "name": "CopyButton",
+            "parent": "",
+            "signature": "function CopyButton("
+          },
+          {
+            "kind": "function",
+            "name": "Perm",
+            "parent": "",
+            "signature": "function Perm("
+          },
+          {
+            "kind": "function",
+            "name": "Step",
+            "parent": "",
+            "signature": "function Step("
+          }
+        ]
+      },
+      {
+        "path": "frontend/src/components/SvgDefs.tsx",
+        "symbols": [
+          {
+            "kind": "function",
+            "name": "SvgDefs",
+            "parent": "",
+            "signature": "export default function SvgDefs()"
+          }
+        ]
+      },
+      {
+        "path": "frontend/src/components/chartTheme.tsx",
+        "symbols": [
+          {
+            "kind": "function",
+            "name": "gradId",
+            "parent": "",
+            "signature": "export function gradId(i: number): string"
+          },
+          {
+            "kind": "function",
+            "name": "barGradId",
+            "parent": "",
+            "signature": "export function barGradId(i: number): string"
+          }
+        ]
+      },
+      {
+        "path": "frontend/src/hooks/useSetupStatus.ts",
+        "symbols": [
+          {
+            "kind": "interface",
+            "name": "SetupStatus",
+            "parent": "",
+            "signature": "interface SetupStatus"
+          },
+          {
+            "kind": "function",
+            "name": "useSetupStatus",
+            "parent": "",
+            "signature": "export function useSetupStatus(enabled: boolean): SetupStatus"
+          }
+        ]
+      },
+      {
+        "path": "frontend/src/lib/buildStamp.ts",
+        "symbols": [
+          {
+            "kind": "function",
+            "name": "buildStamp",
+            "parent": "",
+            "signature": "export function buildStamp(date: string | null, time: string | null): string"
+          },
+          {
+            "kind": "function",
+            "name": "formatDay",
+            "parent": "",
+            "signature": "function formatDay(date: string): string"
+          }
+        ]
+      },
+      {
+        "path": "frontend/src/lib/format.ts",
+        "symbols": [
+          {
+            "kind": "function",
+            "name": "fmtMoney",
+            "parent": "",
+            "signature": "export function fmtMoney(value: number, currency: string | null): string"
+          },
+          {
+            "kind": "function",
+            "name": "fmtNumber",
+            "parent": "",
+            "signature": "export function fmtNumber(value: number): string"
+          },
+          {
+            "kind": "function",
+            "name": "fmtDate",
+            "parent": "",
+            "signature": "export function fmtDate(value: string | null): string"
+          },
+          {
+            "kind": "function",
+            "name": "fmtDayShort",
+            "parent": "",
+            "signature": "export function fmtDayShort(value: string | null): string"
+          }
+        ]
+      },
+      {
+        "path": "frontend/src/lib/suite.ts",
+        "symbols": [
+          {
+            "kind": "interface",
+            "name": "SuiteSolution",
+            "parent": "",
+            "signature": "export interface SuiteSolution"
+          }
+        ]
+      },
+      {
+        "path": "frontend/src/pages/AboutPage.tsx",
+        "symbols": [
+          {
+            "kind": "interface",
+            "name": "AboutMeta",
+            "parent": "",
+            "signature": "interface AboutMeta"
+          },
+          {
+            "kind": "interface",
+            "name": "Freshness",
+            "parent": "",
+            "signature": "interface Freshness"
+          },
+          {
+            "kind": "function",
+            "name": "fmtDay",
+            "parent": "",
+            "signature": "function fmtDay(value: string | null): string"
+          },
+          {
+            "kind": "function",
+            "name": "fmtDateTime",
+            "parent": "",
+            "signature": "function fmtDateTime(value: string | null): string"
+          }
+        ]
+      },
+      {
+        "path": "frontend/src/pages/BillingPolicyPage.tsx",
+        "symbols": [
+          {
+            "kind": "function",
+            "name": "load",
+            "parent": "",
+            "signature": "async function load()"
+          },
+          {
+            "kind": "function",
+            "name": "save",
+            "parent": "",
+            "signature": "async function save()"
+          },
+          {
+            "kind": "function",
+            "name": "edit",
+            "parent": "",
+            "signature": "async function edit(r: BillingPolicy)"
+          },
+          {
+            "kind": "function",
+            "name": "remove",
+            "parent": "",
+            "signature": "async function remove(rg: string)"
+          }
+        ]
+      },
+      {
+        "path": "frontend/src/pages/BriefingPage.tsx",
+        "symbols": [
+          {
+            "kind": "const",
+            "name": "money",
+            "parent": "",
+            "signature": "const money = (n: number)"
+          },
+          {
+            "kind": "const",
+            "name": "isCost",
+            "parent": "",
+            "signature": "const isCost = (d: BriefingDelta)"
+          }
+        ]
+      },
+      {
+        "path": "frontend/src/pages/HelpPage.tsx",
+        "symbols": [
+          {
+            "kind": "function",
+            "name": "HelpPage",
+            "parent": "",
+            "signature": "export default function HelpPage()"
+          }
+        ]
+      },
+      {
+        "path": "frontend/src/pages/LoginPage.tsx",
+        "symbols": [
+          {
+            "kind": "function",
+            "name": "onSubmit",
+            "parent": "",
+            "signature": "async function onSubmit(e: FormEvent)"
+          }
+        ]
+      },
+      {
+        "path": "frontend/src/pages/PersonalPage.tsx",
+        "symbols": [
+          {
+            "kind": "function",
+            "name": "fmtCredits",
+            "parent": "",
+            "signature": "function fmtCredits(n: number): string"
+          },
+          {
+            "kind": "const",
+            "name": "perDay",
+            "parent": "",
+            "signature": "const perDay = (n: number)"
+          }
+        ]
+      },
+      {
+        "path": "frontend/src/pages/ScanHistoryPage.tsx",
+        "symbols": [
+          {
+            "kind": "interface",
+            "name": "ScanRun",
+            "parent": "",
+            "signature": "interface ScanRun"
+          },
+          {
+            "kind": "function",
+            "name": "fmtWhen",
+            "parent": "",
+            "signature": "function fmtWhen(iso: string | null): string"
+          },
+          {
+            "kind": "function",
+            "name": "fmtDuration",
+            "parent": "",
+            "signature": "function fmtDuration(seconds: number | null): string"
+          },
+          {
+            "kind": "function",
+            "name": "fmtStats",
+            "parent": "",
+            "signature": "function fmtStats(stats: Record<string, unknown>): string"
+          }
+        ]
+      },
+      {
+        "path": "frontend/src/pages/SettingsPage.tsx",
+        "symbols": [
+          {
+            "kind": "function",
+            "name": "runTest",
+            "parent": "",
+            "signature": "async function runTest()"
+          },
+          {
+            "kind": "function",
+            "name": "runIngest",
+            "parent": "",
+            "signature": "async function runIngest()"
+          },
+          {
+            "kind": "function",
+            "name": "importUsers",
+            "parent": "",
+            "signature": "async function importUsers()"
+          },
+          {
+            "kind": "function",
+            "name": "runBackfill",
+            "parent": "",
+            "signature": "async function runBackfill()"
+          },
+          {
+            "kind": "const",
+            "name": "poll",
+            "parent": "",
+            "signature": "const poll = async () =>"
+          }
+        ]
+      },
+      {
+        "path": "frontend/src/pages/UsagePage.tsx",
+        "symbols": [
+          {
+            "kind": "function",
+            "name": "UsagePage",
+            "parent": "",
+            "signature": "export default function UsagePage()"
+          }
+        ]
+      },
+      {
+        "path": "frontend/src/theme/ThemeContext.tsx",
+        "symbols": [
+          {
+            "kind": "type",
+            "name": "Theme",
+            "parent": "",
+            "signature": "export type Theme = \"light\" | \"dark\";"
+          },
+          {
+            "kind": "function",
+            "name": "initialTheme",
+            "parent": "",
+            "signature": "function initialTheme(): Theme"
+          },
+          {
+            "kind": "function",
+            "name": "apply",
+            "parent": "",
+            "signature": "function apply(theme: Theme): void"
+          },
+          {
+            "kind": "interface",
+            "name": "ThemeCtx",
+            "parent": "",
+            "signature": "interface ThemeCtx"
+          },
+          {
+            "kind": "function",
+            "name": "ThemeProvider",
+            "parent": "",
+            "signature": "export function ThemeProvider("
+          }
+        ]
+      },
+      {
+        "path": "scripts/_demo_tenant.py",
+        "symbols": [
+          {
+            "kind": "const",
+            "name": "COMPANY",
+            "parent": "",
+            "signature": "COMPANY = \"Avanoso\""
+          },
+          {
+            "kind": "const",
+            "name": "DOMAIN",
+            "parent": "",
+            "signature": "DOMAIN = \"avanoso.com\""
+          },
+          {
+            "kind": "const",
+            "name": "COUNTRY",
+            "parent": "",
+            "signature": "COUNTRY = \"AU\""
+          },
+          {
+            "kind": "const",
+            "name": "LICENCE_HEADCOUNT",
+            "parent": "",
+            "signature": "LICENCE_HEADCOUNT = 1500"
+          },
+          {
+            "kind": "const",
+            "name": "ENVIRONMENTS",
+            "parent": "",
+            "signature": "ENVIRONMENTS = ["
+          },
+          {
+            "kind": "const",
+            "name": "DEPARTMENTS",
+            "parent": "",
+            "signature": "DEPARTMENTS = ["
+          },
+          {
+            "kind": "const",
+            "name": "OFFICES",
+            "parent": "",
+            "signature": "OFFICES = [\"Sydney\", \"Melbourne\", \"Brisbane\", \"Perth\", \"Auckland\", \"Singapore\"]"
+          },
+          {
+            "kind": "class",
+            "name": "Person",
+            "parent": "",
+            "signature": "class Person(NamedTuple)"
+          },
+          {
+            "kind": "function",
+            "name": "display_name",
+            "parent": "Person",
+            "signature": "display_name(self) -> str"
+          },
+          {
+            "kind": "function",
+            "name": "handle",
+            "parent": "Person",
+            "signature": "handle(self) -> str"
+          },
+          {
+            "kind": "function",
+            "name": "upn",
+            "parent": "Person",
+            "signature": "upn(self) -> str"
+          },
+          {
+            "kind": "function",
+            "name": "roster",
+            "parent": "",
+            "signature": "roster(count: int | None = None) -> list[Person]"
+          }
+        ]
+      },
+      {
+        "path": "scripts/seed_admin.py",
+        "symbols": [
+          {
+            "kind": "function",
+            "name": "seed",
+            "parent": "",
+            "signature": "seed(username: str, password: str) -> str"
+          },
+          {
+            "kind": "function",
+            "name": "main",
+            "parent": "",
+            "signature": "main() -> int"
+          }
+        ]
+      },
+      {
+        "path": "scripts/seed_demo.py",
+        "symbols": [
+          {
+            "kind": "function",
+            "name": "seed",
+            "parent": "",
+            "signature": "seed(reset: bool = True) -> dict[str, int]"
+          },
+          {
+            "kind": "function",
+            "name": "clear",
+            "parent": "",
+            "signature": "clear() -> dict[str, int]"
+          },
+          {
+            "kind": "function",
+            "name": "main",
+            "parent": "",
+            "signature": "main() -> int"
+          }
+        ]
+      },
+      {
+        "path": "shared/branding.py",
+        "symbols": [
+          {
+            "kind": "const",
+            "name": "STOPS",
+            "parent": "",
+            "signature": "STOPS: tuple[int, ...] = (50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950)"
+          },
+          {
+            "kind": "const",
+            "name": "DEFAULT_RAMP_HEX",
+            "parent": "",
+            "signature": "DEFAULT_RAMP_HEX: dict[int, str] ="
+          },
+          {
+            "kind": "const",
+            "name": "RAMP_LIGHTNESS",
+            "parent": "",
+            "signature": "RAMP_LIGHTNESS: dict[int, float] ="
+          },
+          {
+            "kind": "const",
+            "name": "RAMP_CHROMA",
+            "parent": "",
+            "signature": "RAMP_CHROMA: dict[int, float] ="
+          },
+          {
+            "kind": "const",
+            "name": "LIGHT_SURFACE",
+            "parent": "",
+            "signature": "LIGHT_SURFACE = \"#ffffff\""
+          },
+          {
+            "kind": "const",
+            "name": "DARK_SURFACE",
+            "parent": "",
+            "signature": "DARK_SURFACE = \"#0f172a\"  # slate-900, the app's dark page background"
+          },
+          {
+            "kind": "const",
+            "name": "LIGHT_ACCENT_STOP",
+            "parent": "",
+            "signature": "LIGHT_ACCENT_STOP = 600  # what `text-brand-600` / `bg-brand-600` use"
+          },
+          {
+            "kind": "const",
+            "name": "DARK_ACCENT_STOP",
+            "parent": "",
+            "signature": "DARK_ACCENT_STOP = 500  # what `dark:text-brand-500` uses"
+          },
+          {
+            "kind": "const",
+            "name": "GRADIENT_LIGHTEST_STOP",
+            "parent": "",
+            "signature": "GRADIENT_LIGHTEST_STOP = 500  # the sign-in panel's `to-brand-500` end"
+          },
+          {
+            "kind": "const",
+            "name": "MIN_CONTRAST",
+            "parent": "",
+            "signature": "MIN_CONTRAST = 4.5  # WCAG 2.1 AA, normal text"
+          },
+          {
+            "kind": "const",
+            "name": "LIFT_STEP",
+            "parent": "",
+            "signature": "LIFT_STEP = 0.01  # OKLab L added per iteration"
+          },
+          {
+            "kind": "const",
+            "name": "LIFT_MAX",
+            "parent": "",
+            "signature": "LIFT_MAX = 0.20  # a guard, not a working range: observed lifts are <= 0.06"
+          },
+          {
+            "kind": "const",
+            "name": "LIFT_TAPER",
+            "parent": "",
+            "signature": "LIFT_TAPER: dict[int, float] = {300: 0.40, 400: 0.75, 500: 1.00, 600: 0.75, 700: 0.40}"
+          },
+          {
+            "kind": "class",
+            "name": "BrandingError",
+            "parent": "",
+            "signature": "class BrandingError(ValueError)"
+          },
+          {
+            "kind": "class",
+            "name": "DerivedBrand",
+            "parent": "",
+            "signature": "class DerivedBrand"
+          },
+          {
+            "kind": "function",
+            "name": "as_json_ramps",
+            "parent": "DerivedBrand",
+            "signature": "as_json_ramps(self) -> tuple[dict[str, str], dict[str, str]]"
+          },
+          {
+            "kind": "function",
+            "name": "normalise_hex",
+            "parent": "",
+            "signature": "normalise_hex(value: str | None) -> str"
+          },
+          {
+            "kind": "function",
+            "name": "hex_to_oklch",
+            "parent": "",
+            "signature": "hex_to_oklch(value: str) -> tuple[float, float, float]"
+          },
+          {
+            "kind": "function",
+            "name": "oklch_to_hex",
+            "parent": "",
+            "signature": "oklch_to_hex(light: float, chroma: float, hue: float) -> str"
+          },
+          {
+            "kind": "function",
+            "name": "relative_luminance",
+            "parent": "",
+            "signature": "relative_luminance(value: str) -> float"
+          },
+          {
+            "kind": "function",
+            "name": "contrast_ratio",
+            "parent": "",
+            "signature": "contrast_ratio(a: str, b: str) -> float"
+          },
+          {
+            "kind": "function",
+            "name": "derive_ramps",
+            "parent": "",
+            "signature": "derive_ramps(seed_hex: str) -> DerivedBrand"
+          },
+          {
+            "kind": "function",
+            "name": "ramp_to_channels",
+            "parent": "",
+            "signature": "ramp_to_channels(ramp: dict[str, str]) -> dict[str, str]"
+          }
+        ]
+      },
+      {
+        "path": "shared/config.py",
+        "symbols": [
+          {
+            "kind": "class",
+            "name": "Settings",
+            "parent": "",
+            "signature": "class Settings(BaseSettings)"
+          },
+          {
+            "kind": "function",
+            "name": "is_production",
+            "parent": "Settings",
+            "signature": "is_production(self) -> bool"
+          },
+          {
+            "kind": "function",
+            "name": "get_settings",
+            "parent": "",
+            "signature": "get_settings() -> Settings"
+          }
+        ]
+      },
+      {
+        "path": "shared/crypto.py",
+        "symbols": [
+          {
+            "kind": "class",
+            "name": "CryptoError",
+            "parent": "",
+            "signature": "class CryptoError(RuntimeError)"
+          },
+          {
+            "kind": "function",
+            "name": "coerce_fernet_key",
+            "parent": "",
+            "signature": "coerce_fernet_key(raw: str) -> bytes"
+          },
+          {
+            "kind": "function",
+            "name": "encrypt",
+            "parent": "",
+            "signature": "encrypt(plaintext: str) -> str"
+          },
+          {
+            "kind": "function",
+            "name": "decrypt",
+            "parent": "",
+            "signature": "decrypt(token: str) -> str"
+          }
+        ]
+      },
+      {
+        "path": "shared/db.py",
+        "symbols": [
+          {
+            "kind": "class",
+            "name": "Base",
+            "parent": "",
+            "signature": "class Base(DeclarativeBase)"
+          },
+          {
+            "kind": "function",
+            "name": "get_session",
+            "parent": "",
+            "signature": "get_session() -> AsyncIterator[AsyncSession]"
+          }
+        ]
+      },
+      {
+        "path": "shared/demo.py",
+        "symbols": [
+          {
+            "kind": "function",
+            "name": "bind_demo_persona",
+            "parent": "",
+            "signature": "bind_demo_persona(session: AsyncSession, *, user_id: str) -> None"
+          },
+          {
+            "kind": "function",
+            "name": "get_demo_persona_user_id",
+            "parent": "",
+            "signature": "get_demo_persona_user_id(session: AsyncSession) -> str | None"
+          },
+          {
+            "kind": "function",
+            "name": "retire_demo_persona",
+            "parent": "",
+            "signature": "retire_demo_persona(session: AsyncSession) -> None"
+          }
+        ]
+      },
+      {
+        "path": "shared/migrate.py",
+        "symbols": [
+          {
+            "kind": "function",
+            "name": "upgrade_to_head",
+            "parent": "",
+            "signature": "upgrade_to_head() -> None"
+          }
+        ]
+      },
+      {
+        "path": "shared/models.py",
+        "symbols": [
+          {
+            "kind": "class",
+            "name": "DailyCost",
+            "parent": "",
+            "signature": "class DailyCost(Base)"
+          },
+          {
+            "kind": "class",
+            "name": "CreditConsumption",
+            "parent": "",
+            "signature": "class CreditConsumption(Base)"
+          },
+          {
+            "kind": "class",
+            "name": "CoworkUsage",
+            "parent": "",
+            "signature": "class CoworkUsage(Base)"
+          },
+          {
+            "kind": "class",
+            "name": "CoworkEvent",
+            "parent": "",
+            "signature": "class CoworkEvent(Base)"
+          },
+          {
+            "kind": "class",
+            "name": "DirectoryUser",
+            "parent": "",
+            "signature": "class DirectoryUser(Base)"
+          },
+          {
+            "kind": "class",
+            "name": "BillingPolicy",
+            "parent": "",
+            "signature": "class BillingPolicy(Base)"
+          },
+          {
+            "kind": "class",
+            "name": "AppConfig",
+            "parent": "",
+            "signature": "class AppConfig(Base)"
+          },
+          {
+            "kind": "class",
+            "name": "IngestState",
+            "parent": "",
+            "signature": "class IngestState(Base)"
+          },
+          {
+            "kind": "class",
+            "name": "JobRun",
+            "parent": "",
+            "signature": "class JobRun(Base)"
+          },
+          {
+            "kind": "class",
+            "name": "AppUser",
+            "parent": "",
+            "signature": "class AppUser(Base)"
+          },
+          {
+            "kind": "class",
+            "name": "BrandingAsset",
+            "parent": "",
+            "signature": "class BrandingAsset(Base)"
+          }
+        ]
+      },
+      {
+        "path": "shared/security.py",
+        "symbols": [
+          {
+            "kind": "function",
+            "name": "hash_password",
+            "parent": "",
+            "signature": "hash_password(password: str) -> str"
+          },
+          {
+            "kind": "function",
+            "name": "verify_password",
+            "parent": "",
+            "signature": "verify_password(password: str, password_hash: str) -> bool"
+          }
+        ]
+      },
+      {
+        "path": "shared/svg_safe.py",
+        "symbols": [
+          {
+            "kind": "const",
+            "name": "SVG_NS",
+            "parent": "",
+            "signature": "SVG_NS = \"http://www.w3.org/2000/svg\""
+          },
+          {
+            "kind": "const",
+            "name": "ALLOWED_TAGS",
+            "parent": "",
+            "signature": "ALLOWED_TAGS: frozenset[str] = frozenset("
+          },
+          {
+            "kind": "const",
+            "name": "FORBIDDEN_TAGS",
+            "parent": "",
+            "signature": "FORBIDDEN_TAGS: frozenset[str] = frozenset("
+          },
+          {
+            "kind": "class",
+            "name": "UnsafeSvgError",
+            "parent": "",
+            "signature": "class UnsafeSvgError(ValueError)"
+          },
+          {
+            "kind": "function",
+            "name": "sanitise_svg",
+            "parent": "",
+            "signature": "sanitise_svg(raw: bytes) -> bytes"
+          }
+        ]
+      },
+      {
+        "path": "shared/version.py",
+        "symbols": [
+          {
+            "kind": "const",
+            "name": "APP_VERSION",
+            "parent": "",
+            "signature": "APP_VERSION = \"0.2.0\""
+          },
+          {
+            "kind": "const",
+            "name": "BUILD_DATE",
+            "parent": "",
+            "signature": "BUILD_DATE = _stamp(\"BUILD_DATE\")"
+          },
+          {
+            "kind": "const",
+            "name": "BUILD_TIME",
+            "parent": "",
+            "signature": "BUILD_TIME = _stamp(\"BUILD_TIME\")"
+          }
+        ]
+      },
+      {
+        "path": "worker/backfill.py",
+        "symbols": [
+          {
+            "kind": "function",
+            "name": "get_progress",
+            "parent": "",
+            "signature": "get_progress() -> dict[str, Any]"
+          },
+          {
+            "kind": "function",
+            "name": "is_running",
+            "parent": "",
+            "signature": "is_running() -> bool"
+          },
+          {
+            "kind": "function",
+            "name": "request_cancel",
+            "parent": "",
+            "signature": "request_cancel() -> None"
+          }
+        ]
+      },
+      {
+        "path": "worker/csv_import.py",
+        "symbols": [
+          {
+            "kind": "class",
+            "name": "CsvImportError",
+            "parent": "",
+            "signature": "class CsvImportError(ValueError)"
+          }
+        ]
+      },
+      {
+        "path": "worker/graph.py",
+        "symbols": [
+          {
+            "kind": "const",
+            "name": "GRAPH_BASE",
+            "parent": "",
+            "signature": "GRAPH_BASE = \"https://graph.microsoft.com/v1.0\""
+          },
+          {
+            "kind": "const",
+            "name": "GRAPH_BETA",
+            "parent": "",
+            "signature": "GRAPH_BETA = \"https://graph.microsoft.com/beta\""
+          },
+          {
+            "kind": "const",
+            "name": "ARM_BASE",
+            "parent": "",
+            "signature": "ARM_BASE = \"https://management.azure.com\""
+          },
+          {
+            "kind": "class",
+            "name": "GraphError",
+            "parent": "",
+            "signature": "class GraphError(RuntimeError)"
+          },
+          {
+            "kind": "class",
+            "name": "GraphAuthError",
+            "parent": "",
+            "signature": "class GraphAuthError(GraphError)"
+          },
+          {
+            "kind": "class",
+            "name": "AppAuth",
+            "parent": "",
+            "signature": "class AppAuth"
+          },
+          {
+            "kind": "function",
+            "name": "graph_token",
+            "parent": "AppAuth",
+            "signature": "graph_token(self) -> str"
+          },
+          {
+            "kind": "function",
+            "name": "arm_token",
+            "parent": "AppAuth",
+            "signature": "arm_token(self) -> str"
+          },
+          {
+            "kind": "class",
+            "name": "ApiClient",
+            "parent": "",
+            "signature": "class ApiClient"
+          },
+          {
+            "kind": "function",
+            "name": "aclose",
+            "parent": "ApiClient",
+            "signature": "aclose(self) -> None"
+          },
+          {
+            "kind": "function",
+            "name": "acquire_graph_token",
+            "parent": "ApiClient",
+            "signature": "acquire_graph_token(self) -> str"
+          },
+          {
+            "kind": "function",
+            "name": "acquire_arm_token",
+            "parent": "ApiClient",
+            "signature": "acquire_arm_token(self) -> str"
+          },
+          {
+            "kind": "function",
+            "name": "get_subscribed_skus",
+            "parent": "ApiClient",
+            "signature": "get_subscribed_skus(self) -> list[dict[str, Any]]"
+          },
+          {
+            "kind": "function",
+            "name": "iter_directory_users",
+            "parent": "ApiClient",
+            "signature": "iter_directory_users(self) -> AsyncIterator[dict[str, Any]]"
+          }
+        ]
+      },
+      {
+        "path": "worker/ingest.py",
+        "symbols": [
+          {
+            "kind": "class",
+            "name": "IngestError",
+            "parent": "",
+            "signature": "class IngestError(RuntimeError)"
+          },
+          {
+            "kind": "function",
+            "name": "load_app_config",
+            "parent": "",
+            "signature": "load_app_config(session: AsyncSession) -> AppConfig | None"
+          },
+          {
+            "kind": "function",
+            "name": "build_client",
+            "parent": "",
+            "signature": "build_client(config: AppConfig) -> ApiClient"
+          },
+          {
+            "kind": "function",
+            "name": "resolve_granting_skus",
+            "parent": "",
+            "signature": "resolve_granting_skus(client: ApiClient) -> set[str]"
+          },
+          {
+            "kind": "function",
+            "name": "flush",
+            "parent": "",
+            "signature": "flush() -> int"
+          },
+          {
+            "kind": "function",
+            "name": "test_connection",
+            "parent": "",
+            "signature": "test_connection(config: AppConfig) -> dict[str, Any]"
+          },
+          {
+            "kind": "function",
+            "name": "count_events",
+            "parent": "",
+            "signature": "count_events(session: AsyncSession) -> int"
+          }
+        ]
+      },
+      {
+        "path": "worker/licensing.py",
+        "symbols": [
+          {
+            "kind": "const",
+            "name": "COPILOT_SERVICE_PLAN_ID",
+            "parent": "",
+            "signature": "COPILOT_SERVICE_PLAN_ID = \"3f30311c-6b1e-48a4-ab79-725b469da960\""
+          },
+          {
+            "kind": "const",
+            "name": "KNOWN_COPILOT_SKUS",
+            "parent": "",
+            "signature": "KNOWN_COPILOT_SKUS ="
+          },
+          {
+            "kind": "function",
+            "name": "sku_grants_copilot",
+            "parent": "",
+            "signature": "sku_grants_copilot(sku: dict[str, Any]) -> bool"
+          },
+          {
+            "kind": "function",
+            "name": "has_copilot_license",
+            "parent": "",
+            "signature": "has_copilot_license(user: dict[str, Any], granting_skus: Iterable[str]) -> bool"
+          }
+        ]
+      },
+      {
+        "path": "worker/main.py",
+        "symbols": [
+          {
+            "kind": "function",
+            "name": "clamp_interval_hours",
+            "parent": "",
+            "signature": "clamp_interval_hours(hours: int | None) -> int"
+          },
+          {
+            "kind": "function",
+            "name": "load_interval_hours",
+            "parent": "",
+            "signature": "load_interval_hours() -> int"
+          },
+          {
+            "kind": "function",
+            "name": "scheduled_ingest",
+            "parent": "",
+            "signature": "scheduled_ingest() -> None"
+          },
+          {
+            "kind": "function",
+            "name": "main",
+            "parent": "",
+            "signature": "main() -> None"
+          },
+          {
+            "kind": "function",
+            "name": "apply_schedule",
+            "parent": "",
+            "signature": "apply_schedule() -> None"
+          }
+        ]
+      },
+      {
+        "path": "worker/transforms.py",
+        "symbols": [
+          {
+            "kind": "function",
+            "name": "is_cowork_event",
+            "parent": "",
+            "signature": "is_cowork_event(record: dict[str, Any]) -> bool"
+          },
+          {
+            "kind": "function",
+            "name": "looks_like_upn",
+            "parent": "",
+            "signature": "looks_like_upn(value: Any) -> bool"
+          },
+          {
+            "kind": "function",
+            "name": "transform_cowork_event",
+            "parent": "",
+            "signature": "transform_cowork_event(record: dict[str, Any]) -> dict[str, Any] | None"
+          },
+          {
+            "kind": "function",
+            "name": "is_included_directory_user",
+            "parent": "",
+            "signature": "is_included_directory_user(user: dict[str, Any]) -> bool"
+          },
+          {
+            "kind": "function",
+            "name": "get",
+            "parent": "",
+            "signature": "get(name: str) -> Any"
+          },
+          {
+            "kind": "function",
+            "name": "now_utc",
+            "parent": "",
+            "signature": "now_utc() -> datetime"
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    "tests/__init__.py",
+    "tests/conftest.py",
+    "tests/test_admin_group.py",
+    "tests/test_api.py",
+    "tests/test_branding_api.py",
+    "tests/test_branding_defaults_unchanged.py",
+    "tests/test_branding_ramp.py",
+    "tests/test_briefing.py",
+    "tests/test_csv_import.py",
+    "tests/test_demo_persona.py",
+    "tests/test_demo_population.py",
+    "tests/test_event_identity.py",
+    "tests/test_json_array_length.py",
+    "tests/test_licensing.py",
+    "tests/test_oidc.py",
+    "tests/test_peer_comparison.py",
+    "tests/test_personal_activity.py",
+    "tests/test_personal_view.py",
+    "tests/test_scan_history.py",
+    "tests/test_sql_dialects.py",
+    "tests/test_static_cache.py",
+    "tests/test_svg_sanitise.py",
+    "tests/test_tenant_users.py",
+    "tests/test_transforms.py",
+    "tests/test_user_sync.py"
+  ],
+  "operations": [
+    ".dockerignore",
+    ".env.example",
+    ".github/workflows/compile-arm.yml",
+    ".github/workflows/publish-images.yml",
+    ".github/workflows/tests.yml",
+    "Dockerfile",
+    "alembic/env.py",
+    "alembic/script.py.mako",
+    "alembic/versions/0001_initial.py",
+    "alembic/versions/0002_user_profile.py",
+    "alembic/versions/0003_org_view_group.py",
+    "alembic/versions/0004_admin_group.py",
+    "alembic/versions/0005_copilot_license.py",
+    "alembic/versions/0006_demo_persona.py",
+    "alembic/versions/0007_normalise_event_identity.py",
+    "alembic/versions/0008_customer_branding.py",
+    "docker-compose.yml"
+  ],
+  "limitations": {
+    "unparsed_languages": [],
+    "excluded_dirs": [],
+    "code_map_truncated": false,
+    "code_map_symbols_capped": true,
+    "tracked_files_only": true
+  },
+  "generated": {
+    "source_commit": "3ca90b9d90576d7d09e8addf5f0370bcdd66e9a3",
+    "content_hash": "ca02a47df60756f3",
+    "generator": "navgen"
+  }
+}
